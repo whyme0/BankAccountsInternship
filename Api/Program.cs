@@ -13,6 +13,9 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite("Data Source=BankDb.db"));
 
+builder.Services.AddMediatR(c => 
+    c.RegisterServicesFromAssembly(typeof(Program).Assembly));
+
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
