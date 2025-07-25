@@ -13,6 +13,11 @@ namespace Api.Data.Configurations
             builder.Property(o => o.Name)
                 .IsRequired()
                 .HasMaxLength(100);
+
+            builder.HasMany(c => c.Accounts)
+                .WithOne(a => a.Owner)
+                .HasForeignKey(a => a.OwnerId)
+                .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }

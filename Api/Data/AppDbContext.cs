@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Api.Data
 {
-    public class AppDbContext : DbContext
+    public class AppDbContext : DbContext, IAppDbContext
     {
         public DbSet<Client> Clients { get; set; }
         public DbSet<Account> Accounts { get; set; }

@@ -1,17 +1,22 @@
 using Api.Data;
 using Microsoft.EntityFrameworkCore;
-using System;
 using Api.Data.Initializer;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllers();
+builder.Services
+    .AddControllers()
+    .AddJsonOptions(opts =>
+    {
+        opts.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
+    });
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite("Data Source=BankDb.db"));
+builder.Services.AddScoped<IAppDbContext, AppDbContext>();
 
 builder.Services.AddMediatR(c => 
     c.RegisterServicesFromAssembly(typeof(Program).Assembly));
