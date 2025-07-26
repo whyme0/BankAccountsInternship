@@ -8,7 +8,7 @@ using Api.Features.Accounts.GetAllAccounts;
 using Api.Features.Accounts.TransferMoneyBetweenAccounts;
 using Api.Features.Accounts.UpdateAccount;
 using Api.Features.Transactions;
-using Api.Features.Transactions.GetTransaction;
+using Api.Features.Transactions.GetStatement;
 using MediatR;
 
 namespace Api.Features.Accounts

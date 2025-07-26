@@ -6,7 +6,7 @@ using Api.Features.Accounts.GetAccount;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
-namespace Api.Features.Transactions.GetTransaction
+namespace Api.Features.Transactions.GetStatement
 {
     public class GetStatementHandler : IQueryHandler<GetStatementQuery, IEnumerable<TransactionDto>>
     {

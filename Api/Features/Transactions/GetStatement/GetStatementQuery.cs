@@ -1,7 +1,7 @@
 ﻿using Api.Abstractions;
 using Api.Features.Accounts;
 
-namespace Api.Features.Transactions.GetTransaction
+namespace Api.Features.Transactions.GetStatement
 {
     public class GetStatementQuery : IQuery<IEnumerable<TransactionDto>>
     {
