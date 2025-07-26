@@ -1,4 +1,4 @@
-﻿namespace Api
+﻿namespace Api.Features
 {
     public class ErrorRfc9910Dto
     {
