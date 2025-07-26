@@ -6,42 +6,33 @@ using Api.Features.Accounts.GetAccount;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
-namespace Api.Features.Transactions.GetStatement
+namespace Api.Features.Transactions.GetStatement;
+
+public class GetStatementHandler(IAppDbContext context, IMediator mediator)
+    : IQueryHandler<GetStatementQuery, IEnumerable<TransactionDto>>
 {
-    public class GetStatementHandler : IQueryHandler<GetStatementQuery, IEnumerable<TransactionDto>>
+    public async Task<IEnumerable<TransactionDto>> Handle(GetStatementQuery request, CancellationToken cancellationToken)
     {
-        private readonly IAppDbContext _context;
-        private readonly IMediator _mediator;
+        var account = await mediator.Send(new GetAccountQuery { Id = request.AccountId }, cancellationToken);
 
-        public GetStatementHandler(IAppDbContext context, IMediator mediator)
-        {
-            _context = context;
-            _mediator = mediator;
-        }
+        if (account == null) throw new NotFoundException(request.AccountId.ToString());
+        if (request.StartDate > request.EndDate) throw new BadRequestException("Wrong date range");
 
-        public async Task<IEnumerable<TransactionDto>> Handle(GetStatementQuery request, CancellationToken cancellationToken)
-        {
-            var account = await _mediator.Send(new GetAccountQuery { Id = request.AccountId }, cancellationToken);
-
-            if (account == null) throw new NotFoundException(request.AccountId.ToString());
-            if (request.StartDate > request.EndDate) throw new BadRequestException("Wrong date range");
-
-            var transactions = _context.Transactions
-                .Where(t => t.AccountId == request.AccountId && t.Date >= request.StartDate &&
-                            t.Date <= request.EndDate)
-                .OrderByDescending(t => t.Date);
+        var transactions = context.Transactions
+            .Where(t => t.AccountId == request.AccountId && t.Date >= request.StartDate &&
+                        t.Date <= request.EndDate)
+            .OrderByDescending(t => t.Date);
             
-            return await transactions.Select(t => new TransactionDto()
-            {
-                Id = t.Id,
-                AccountId = t.AccountId,
-                CounterPartyAccountId = t.CounterPartyAccountId,
-                Amount = t.Amount,
-                Currency = t.Currency,
-                Type = t.Type,
-                Description = t.Description,
-                Date = t.Date
-            }).ToListAsync(cancellationToken);
-        }
+        return await transactions.Select(t => new TransactionDto
+        {
+            Id = t.Id,
+            AccountId = t.AccountId,
+            CounterPartyAccountId = t.CounterPartyAccountId,
+            Amount = t.Amount,
+            Currency = t.Currency,
+            Type = t.Type,
+            Description = t.Description,
+            Date = t.Date
+        }).ToListAsync(cancellationToken);
     }
 }

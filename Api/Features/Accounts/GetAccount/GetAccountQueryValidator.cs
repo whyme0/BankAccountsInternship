@@ -1,13 +1,13 @@
 ﻿using FluentValidation;
 
-namespace Api.Features.Accounts.GetAccount
+namespace Api.Features.Accounts.GetAccount;
+
+// ReSharper disable once UnusedType.Global
+public class GetAccountQueryValidator : AbstractValidator<GetAccountQuery>
 {
-    public class GetAccountQueryValidator : AbstractValidator<GetAccountQuery>
+    public GetAccountQueryValidator()
     {
-        public GetAccountQueryValidator()
-        {
-            RuleFor(x => x.Id)
-                .NotEmpty().NotEqual(Guid.Empty).WithMessage("AccountId is required.");
-        }
+        RuleFor(x => x.Id)
+            .NotEmpty().NotEqual(Guid.Empty).WithMessage("AccountId is required.");
     }
 }

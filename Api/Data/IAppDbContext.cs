@@ -1,14 +1,14 @@
 ﻿using Api.Models;
 using Microsoft.EntityFrameworkCore;
+// ReSharper disable UnusedMemberInSuper.Global
 
-namespace Api.Data
+namespace Api.Data;
+
+public interface IAppDbContext
 {
-    public interface IAppDbContext
-    {
-        public DbSet<Client> Clients { get; set; }
-        public DbSet<Account> Accounts { get; set; }
-        public DbSet<Transaction> Transactions { get; set; }
+    public DbSet<Client> Clients { get; set; }
+    public DbSet<Account> Accounts { get; set; }
+    public DbSet<Transaction> Transactions { get; set; }
 
-        public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
-    }
+    public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

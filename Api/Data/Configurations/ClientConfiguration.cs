@@ -2,22 +2,21 @@
 using Api.Models;
 using Microsoft.EntityFrameworkCore;
 
-namespace Api.Data.Configurations
+namespace Api.Data.Configurations;
+
+public class ClientConfiguration : IEntityTypeConfiguration<Client>
 {
-    public class ClientConfiguration : IEntityTypeConfiguration<Client>
+    public void Configure(EntityTypeBuilder<Client> builder)
     {
-        public void Configure(EntityTypeBuilder<Client> builder)
-        {
-            builder.HasKey(o => o.Id);
+        builder.HasKey(o => o.Id);
 
-            builder.Property(o => o.Name)
-                .IsRequired()
-                .HasMaxLength(100);
+        builder.Property(o => o.Name)
+            .IsRequired()
+            .HasMaxLength(100);
 
-            builder.HasMany(c => c.Accounts)
-                .WithOne(a => a.Owner)
-                .HasForeignKey(a => a.OwnerId)
-                .OnDelete(DeleteBehavior.Cascade);
-        }
+        builder.HasMany(c => c.Accounts)
+            .WithOne(a => a.Owner)
+            .HasForeignKey(a => a.OwnerId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }

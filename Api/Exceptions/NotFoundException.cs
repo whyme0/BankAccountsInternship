@@ -1,6 +1,3 @@
-﻿namespace Api.Exceptions
-{
-    public class NotFoundException(string? message = default) : Exception(message)
-    {
-    }
-}
+﻿namespace Api.Exceptions;
+
+public class NotFoundException(string? message = null) : Exception(message);

@@ -61,19 +61,20 @@ app.UseExceptionHandler(errorApp =>
     {
         var exceptionHandlerPathFeature = context.Features.Get<IExceptionHandlerPathFeature>();
 
-        if (exceptionHandlerPathFeature?.Error is ValidationException validationException)
+        switch (exceptionHandlerPathFeature?.Error)
         {
-            context.Response.StatusCode = 400;
-            await context.Response.WriteAsJsonAsync(new
-            {
-                Errors = validationException.Errors.Select(e => new { e.PropertyName, e.ErrorMessage })
-            });
-        }
-        if (exceptionHandlerPathFeature?.Error is NotFoundException)
-        {
-            context.Response.StatusCode = 404;
-            context.Response.ContentType = "application/json";
-            await context.Response.WriteAsJsonAsync(new { Message = "Not Found" });
+            case ValidationException validationException:
+                context.Response.StatusCode = 400;
+                await context.Response.WriteAsJsonAsync(new
+                {
+                    Errors = validationException.Errors.Select(e => new { e.PropertyName, e.ErrorMessage })
+                });
+                break;
+            case NotFoundException:
+                context.Response.StatusCode = 404;
+                context.Response.ContentType = "application/json";
+                await context.Response.WriteAsJsonAsync(new { Message = "Not Found" });
+                break;
         }
     });
 });

@@ -4,22 +4,15 @@ using Api.Exceptions;
 using Api.Models;
 using Microsoft.EntityFrameworkCore;
 
-namespace Api.Features.Clients.GetClient
+namespace Api.Features.Clients.GetClient;
+
+public class GetClientHandler(IAppDbContext context) : IQueryHandler<GetClientQuery, Client>
 {
-    public class GetClientHandler : IQueryHandler<GetClientQuery, Client>
+    public async Task<Client> Handle(GetClientQuery request, CancellationToken cancellationToken)
     {
-        private readonly IAppDbContext _context;
-        public GetClientHandler(IAppDbContext context)
-        {
-            _context = context;
-        }
+        var client = await context.Clients.FirstOrDefaultAsync(c => c.Id == request.Id, cancellationToken);
+        if (client == null) throw new NotFoundException();
 
-        public async Task<Client> Handle(GetClientQuery request, CancellationToken cancellationToken)
-        {
-            var client = await _context.Clients.FirstOrDefaultAsync(c => c.Id == request.Id, cancellationToken);
-            if (client == null) throw new NotFoundException();
-
-            return client;
-        }
+        return client;
     }
 }

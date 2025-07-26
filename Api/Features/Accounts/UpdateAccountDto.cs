@@ -1,8 +1,8 @@
-﻿namespace Api.Features.Accounts
+﻿// ReSharper disable UnusedAutoPropertyAccessor.Global
+namespace Api.Features.Accounts;
+
+public class UpdateAccountDto
 {
-    public class UpdateAccountDto
-    {
-        public decimal? InterestRate { get; set; }
-        public DateTime? ClosedDate { get; set; }
-    }
+    public decimal? InterestRate { get; set; }
+    public DateTime? ClosedDate { get; set; }
 }

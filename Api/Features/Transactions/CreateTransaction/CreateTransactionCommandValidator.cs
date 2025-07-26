@@ -1,24 +1,24 @@
 ﻿using FluentValidation;
+// ReSharper disable UnusedType.Global
 
-namespace Api.Features.Transactions.CreateTransaction
+namespace Api.Features.Transactions.CreateTransaction;
+
+public class CreateTransactionCommandValidator : AbstractValidator<CreateTransactionCommand>
 {
-    public class CreateTransactionCommandValidator : AbstractValidator<CreateTransactionCommand>
+    public CreateTransactionCommandValidator()
     {
-        public CreateTransactionCommandValidator()
-        {
-            RuleFor(x => x.AccountId)
-                .NotEmpty().NotEqual(Guid.Empty)
-                .WithMessage("AccountId is required.");
+        RuleFor(x => x.AccountId)
+            .NotEmpty().NotEqual(Guid.Empty)
+            .WithMessage("AccountId is required.");
 
-            RuleFor(x => x.Currency)
-                .NotEmpty().WithMessage("Currency is required.")
-                .Length(3).WithMessage("Currency must be a 3-letter ISO code.");
+        RuleFor(x => x.Currency)
+            .NotEmpty().WithMessage("Currency is required.")
+            .Length(3).WithMessage("Currency must be a 3-letter ISO code.");
 
-            RuleFor(x => x.Type)
-                .IsInEnum().WithMessage("Invalid transaction type.");
+        RuleFor(x => x.Type)
+            .IsInEnum().WithMessage("Invalid transaction type.");
 
-            RuleFor(x => x.Description)
-                .MaximumLength(500).WithMessage("Description cannot exceed 500 characters.");
-        }
+        RuleFor(x => x.Description)
+            .MaximumLength(500).WithMessage("Description cannot exceed 500 characters.");
     }
 }

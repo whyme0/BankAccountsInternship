@@ -1,13 +1,13 @@
 ﻿using FluentValidation;
+// ReSharper disable UnusedType.Global
 
-namespace Api.Features.Clients.GetClient
+namespace Api.Features.Clients.GetClient;
+
+public class GetClientQueryValidator : AbstractValidator<GetClientQuery>
 {
-    public class GetClientQueryValidator : AbstractValidator<GetClientQuery>
+    public GetClientQueryValidator()
     {
-        public GetClientQueryValidator()
-        {
-            RuleFor(x => x.Id)
-                .NotEmpty().NotEqual(Guid.Empty).WithMessage("Id required");
-        }
+        RuleFor(x => x.Id)
+            .NotEmpty().NotEqual(Guid.Empty).WithMessage("Id required");
     }
 }

@@ -4,29 +4,26 @@ using Api.Models;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Api.Features.Clients
+namespace Api.Features.Clients;
+
+[ApiController]
+[Route("api/[controller]")]
+[Produces("application/json")]
+public class ClientsController(IMediator mediator) : ControllerBase
 {
-    [ApiController]
-    [Route("api/[controller]")]
-    [Produces("application/json")]
-    public class ClientsController(IMediator mediator) : ControllerBase
+    [HttpGet]
+    public async Task<ActionResult<IEnumerable<Client>>> GetClients()
     {
-        private readonly IMediator _mediator = mediator;
-
-        [HttpGet]
-        public async Task<ActionResult<IEnumerable<Client>>> GetClients()
-        {
-            var clients = await _mediator.Send(new GetAllClientsQuery());
+        var clients = await mediator.Send(new GetAllClientsQuery());
             
-            return Ok(clients);
-        }
+        return Ok(clients);
+    }
 
-        [HttpGet("{id}")]
-        public async Task<ActionResult<Client>> GetClientById(Guid id)
-        {
-            var client = await _mediator.Send(new GetClientQuery() { Id = id });
+    [HttpGet("{id:guid}")]
+    public async Task<ActionResult<Client>> GetClientById(Guid id)
+    {
+        var client = await mediator.Send(new GetClientQuery { Id = id });
 
-            return Ok(client);
-        }
+        return Ok(client);
     }
 }

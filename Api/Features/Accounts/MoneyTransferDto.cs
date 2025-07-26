@@ -1,8 +1,8 @@
-﻿namespace Api.Features.Accounts
+﻿// ReSharper disable UnusedAutoPropertyAccessor.Global
+namespace Api.Features.Accounts;
+
+public class MoneyTransferDto
 {
-    public class MoneyTransferDto
-    {
-        public Guid RecipientId { get; set; }
-        public decimal Amount { get; set; }
-    }
+    public Guid RecipientId { get; set; }
+    public decimal Amount { get; set; }
 }

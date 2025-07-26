@@ -1,8 +1,8 @@
-﻿namespace Api.Features.Transactions
+﻿// ReSharper disable UnusedAutoPropertyAccessor.Global
+namespace Api.Features.Transactions;
+
+public class GetStatementDto
 {
-    public class GetStatementDto
-    {
-        public DateTime StartDate { get; set; }
-        public DateTime EndDate { get; set; }
-    }
+    public DateTime StartDate { get; set; }
+    public DateTime EndDate { get; set; }
 }

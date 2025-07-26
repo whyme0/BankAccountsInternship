@@ -3,28 +3,20 @@ using Api.Data;
 using Api.Exceptions;
 using MediatR;
 
-namespace Api.Features.Accounts.DeleteAccount
+namespace Api.Features.Accounts.DeleteAccount;
+
+public class DeleteAccountHandler(IAppDbContext context) : ICommandHandler<DeleteAccountCommand, Unit>
 {
-    public class DeleteAccountHandler : ICommandHandler<DeleteAccountCommand, Unit>
+    public async Task<Unit> Handle(DeleteAccountCommand request, CancellationToken cancellationToken)
     {
-        private readonly IAppDbContext _context;
+        var account = context.Accounts.FirstOrDefault(a => a.Id == request.Id);
 
-        public DeleteAccountHandler(IAppDbContext context)
-        {
-            _context = context;
-        }
+        if (account == null)
+            throw new NotFoundException(request.Id.ToString());
 
-        public async Task<Unit> Handle(DeleteAccountCommand request, CancellationToken cancellationToken)
-        {
-            var account = _context.Accounts.FirstOrDefault(a => a.Id == request.Id);
+        context.Accounts.Remove(account);
+        await context.SaveChangesAsync(cancellationToken);
 
-            if (account == null)
-                throw new NotFoundException(request.Id.ToString());
-
-            _context.Accounts.Remove(account);
-            await _context.SaveChangesAsync(cancellationToken);
-
-            return Unit.Value;
-        }
+        return Unit.Value;
     }
 }

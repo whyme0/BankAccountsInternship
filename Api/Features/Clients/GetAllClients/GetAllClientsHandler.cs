@@ -3,25 +3,17 @@ using Api.Data;
 using Api.Models;
 using Microsoft.EntityFrameworkCore;
 
-namespace Api.Features.Clients.GetAllClients
+namespace Api.Features.Clients.GetAllClients;
+
+public class GetAllClientsHandler(IAppDbContext context) : IQueryHandler<GetAllClientsQuery, IEnumerable<Client>>
 {
-    public class GetAllClientsHandler : IQueryHandler<GetAllClientsQuery, IEnumerable<Client>>
+    public async Task<IEnumerable<Client>> Handle(GetAllClientsQuery request, CancellationToken cancellationToken)
     {
-        private readonly IAppDbContext _context;
+        var clients = await context.Clients
+            .Include(c => c.Accounts)
+            .ThenInclude(a => a.Transactions)
+            .ToListAsync(cancellationToken);
 
-        public GetAllClientsHandler(IAppDbContext context)
-        {
-            _context = context;
-        }
-        
-        public async Task<IEnumerable<Client>> Handle(GetAllClientsQuery request, CancellationToken cancellationToken)
-        {
-            var clients = await _context.Clients
-                .Include(c => c.Accounts)
-                .ThenInclude(a => a.Transactions)
-                .ToListAsync(cancellationToken);
-
-            return clients;
-        }
+        return clients;
     }
 }
