@@ -62,10 +62,10 @@ PM> Add-Migration Init
 
 ***Сценарий 4. Я, как клиент банка Иван, перевёл 200 рублей со своего текущего счёта на вклад «Надёжный‑6», чтобы пополнить вклад.***
 
-Выполнить `POST` запрос по адресу `https://localhost:7262/api/accounts/1f3be8c7-caac-441e-bf2f-596dee2010bc/transfer` с телом запроса:
+Выполнить `POST` запрос по адресу `https://localhost:7262/api/accounts/{senderAccountId}/transfer` с телом запроса:
 ```json
 {
-  "recipientId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "recipientId": "1f3be8c7-caac-441e-bf2f-596dee2010bc",
   "amount": 500
 }
 ```
