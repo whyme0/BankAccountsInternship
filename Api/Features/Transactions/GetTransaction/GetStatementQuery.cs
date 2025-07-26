@@ -1,6 +1,5 @@
 ﻿using Api.Abstractions;
 using Api.Features.Accounts;
-using MediatR;
 
 namespace Api.Features.Transactions.GetTransaction
 {

@@ -7,43 +7,37 @@ using MediatR;
 
 namespace Api.Features.Accounts.CreateAccount
 {
-    public class CreateAccountHandler : ICommandHandler<CreateAccountCommand, AccountDto>
+    public class CreateAccountHandler(IAppDbContext context, IMediator mediator) : ICommandHandler<CreateAccountCommand, AccountDto>
     {
-    private readonly IAppDbContext _context;
-    private readonly IMediator _mediator;
+        private readonly IAppDbContext _context = context;
+        private readonly IMediator _mediator = mediator;
 
-    public CreateAccountHandler(IAppDbContext context, IMediator mediator)
-    {
-        _context = context;
-        _mediator = mediator;
-    }
-
-    public async Task<AccountDto> Handle(CreateAccountCommand request, CancellationToken cancellationToken)
-    {
-        var accountOwner = _context.Clients.FirstOrDefault(c => c.Id == request.OwnerId);
-
-        if (accountOwner == null) throw new NotFoundException(request.OwnerId.ToString());
-
-        var account = new Account()
+        public async Task<AccountDto> Handle(CreateAccountCommand request, CancellationToken cancellationToken)
         {
-            Id = new Guid(),
-            OwnerId = accountOwner!.Id,
-            Owner = accountOwner,
-            Type = request.Type,
-            Currency = request.Currency,
-            Balance = request.Balance,
-            InterestRate = request.InterestRate,
-            OpenedDate = DateTime.UtcNow,
-            ClosedDate = request.ClosedDate
-        };
+            var accountOwner = _context.Clients.FirstOrDefault(c => c.Id == request.OwnerId);
 
-        _context.Accounts.Add(account);
-        await _context.SaveChangesAsync(cancellationToken);
+            if (accountOwner == null) throw new NotFoundException(request.OwnerId.ToString());
 
-        return await _mediator.Send(new GetAccountQuery()
-        {
-            Id = account.Id
-        }, cancellationToken);
-    }
+            var account = new Account()
+            {
+                Id = new Guid(),
+                OwnerId = accountOwner.Id,
+                Owner = accountOwner,
+                Type = request.Type,
+                Currency = request.Currency,
+                Balance = request.Balance,
+                InterestRate = request.InterestRate,
+                OpenedDate = DateTime.UtcNow,
+                ClosedDate = request.ClosedDate
+            };
+
+            _context.Accounts.Add(account);
+            await _context.SaveChangesAsync(cancellationToken);
+
+            return await _mediator.Send(new GetAccountQuery()
+            {
+                Id = account.Id
+            }, cancellationToken);
+        }
     }
 }

@@ -24,7 +24,7 @@ namespace Api.Features.Transactions.GetTransaction
             var account = await _mediator.Send(new GetAccountQuery { Id = request.AccountId }, cancellationToken);
 
             if (account == null) throw new NotFoundException(request.AccountId.ToString());
-            if (request.StartDate > request.EndDate) throw new BadRequestException();
+            if (request.StartDate > request.EndDate) throw new BadRequestException("Wrong date range");
 
             var transactions = _context.Transactions
                 .Where(t => t.AccountId == request.AccountId && t.Date >= request.StartDate &&

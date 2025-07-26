@@ -1,6 +1,4 @@
 ﻿using Api.Abstractions;
-using Api.Models;
-using MediatR;
 
 namespace Api.Features.Accounts.UpdateAccount
 {

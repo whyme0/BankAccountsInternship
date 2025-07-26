@@ -1,7 +1,5 @@
 ﻿using Api.Abstractions;
 using Api.Data;
-using Api.Models;
-using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace Api.Features.Accounts.GetAllAccounts

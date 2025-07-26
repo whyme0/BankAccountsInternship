@@ -1,6 +1,6 @@
 ﻿namespace Api.Exceptions
 {
-    public class NotFoundException(string propertyValue) : Exception($"Entity with property '{propertyValue}' not found")
+    public class NotFoundException(string? message = default) : Exception(message)
     {
     }
 }

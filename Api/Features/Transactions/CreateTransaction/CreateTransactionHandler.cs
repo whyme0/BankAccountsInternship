@@ -2,8 +2,6 @@
 using Api.Data;
 using Api.Exceptions;
 using Api.Models;
-using MediatR;
-using Microsoft.AspNetCore.Routing.Tree;
 using Microsoft.EntityFrameworkCore;
 
 namespace Api.Features.Transactions.CreateTransaction

@@ -1,7 +1,6 @@
 ﻿using Api.Abstractions;
 using Api.Data;
 using Api.Exceptions;
-using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace Api.Features.Accounts.UpdateAccount

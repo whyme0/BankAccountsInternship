@@ -1,6 +1,6 @@
 ﻿namespace Api.Exceptions
 {
-    public class BadRequestException() : Exception($"Bad request")
+    public class BadRequestException(string message) : Exception(message)
     {
     }
 }

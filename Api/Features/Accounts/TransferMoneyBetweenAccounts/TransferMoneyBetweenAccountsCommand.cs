@@ -1,5 +1,4 @@
 ﻿using Api.Abstractions;
-using MediatR;
 
 namespace Api.Features.Accounts.TransferMoneyBetweenAccounts
 {

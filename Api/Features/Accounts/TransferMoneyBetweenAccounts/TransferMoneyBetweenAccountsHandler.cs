@@ -25,8 +25,10 @@ namespace Api.Features.Accounts.TransferMoneyBetweenAccounts
 
             if (senderAccount == null) throw new NotFoundException(request.SenderAccountId.ToString());
             if (recipientAccount == null) throw new NotFoundException(request.RecipientAccountId.ToString());
-            if (request.Amount > senderAccount.Balance) throw new NotEnoughBalanceException(senderAccount.Balance, senderAccount.Id.ToString());
-            if (senderAccount.Currency != recipientAccount.Currency) throw new IncorrectCurrencyCompatibility(senderAccount.Currency, recipientAccount.Currency);
+            if (request.Amount > senderAccount.Balance) throw new BadRequestException("Amount more than available balance");
+            if (senderAccount.Currency != recipientAccount.Currency) throw new BadRequestException("Incompatibility of currencies");
+            if (DateTime.UtcNow > recipientAccount.ClosedDate)
+                throw new BadRequestException("Cannot make transfer to closed account");
 
             var currentDate = DateTime.UtcNow;
 

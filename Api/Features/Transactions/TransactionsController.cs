@@ -23,25 +23,18 @@ namespace Api.Features.Transactions
         [ProducesResponseType<ErrorRfc9910Dto>(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<TransactionDto>> CreateTransaction([FromBody] CreateTransactionDto dto)
         {
-            try
+            var transaction = await _mediator.Send(new CreateTransactionCommand()
             {
-                var transaction = await _mediator.Send(new CreateTransactionCommand()
-                {
-                    AccountId = dto.AccountId,
-                    Amount = dto.Amount,
-                    CounterPartyAccountId = dto.CounterPartyAccountId,
-                    Currency = dto.Currency,
-                    Date = DateTime.UtcNow,
-                    Description = dto.Description,
-                    Type = dto.Type
-                });
+                AccountId = dto.AccountId,
+                Amount = dto.Amount,
+                CounterPartyAccountId = dto.CounterPartyAccountId,
+                Currency = dto.Currency,
+                Date = DateTime.UtcNow,
+                Description = dto.Description,
+                Type = dto.Type
+            });
 
-                return Created(".", transaction);
-            }
-            catch (NotFoundException)
-            {
-                return NotFound();
-            }
+            return Created(".", transaction);
         }
     }
 }

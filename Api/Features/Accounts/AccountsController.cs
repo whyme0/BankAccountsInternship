@@ -1,6 +1,4 @@
-﻿using Api.Models;
-using Microsoft.AspNetCore.Mvc;
-using Api.Data;
+﻿using Microsoft.AspNetCore.Mvc;
 using Api.Exceptions;
 using Api.Features.Accounts.AccountExists;
 using Api.Features.Accounts.CreateAccount;
@@ -12,26 +10,19 @@ using Api.Features.Accounts.UpdateAccount;
 using Api.Features.Transactions;
 using Api.Features.Transactions.GetTransaction;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
 
 namespace Api.Features.Accounts
 {
     [ApiController]
     [Route("api/[controller]")]
     [Produces("application/json")]
-    public class AccountsController : ControllerBase
+    public class AccountsController(IMediator mediator) : ControllerBase
     {
-        private readonly IAppDbContext _context;
-        private readonly IMediator _mediator;
-
-        public AccountsController(IAppDbContext context, IMediator mediator)
-        {
-            _context = context;
-            _mediator = mediator;
-        }
+        private readonly IMediator _mediator = mediator;
 
         #region CREATE
         [HttpPost]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType<TransactionDto>(StatusCodes.Status201Created)]
         [ProducesResponseType<ErrorRfc9910Dto>(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<AccountDto>> CreateAccount([FromBody] CreateAccountDto dto)
@@ -57,8 +48,8 @@ namespace Api.Features.Accounts
 
         [HttpPost("transfer")]
         [ProducesResponseType(StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType<ErrorRfc9910Dto>(StatusCodes.Status404NotFound)]
-        [ProducesResponseType<ErrorRfc9910Dto>(StatusCodes.Status400BadRequest)]
         public async Task<IActionResult> Transfer([FromBody] MoneyTransferDto dto)
         {
             try
@@ -79,7 +70,7 @@ namespace Api.Features.Accounts
                 return BadRequest(new { e.Message });
             }
 
-            return Ok();
+            return Created();
         }
         #endregion
 
@@ -93,57 +84,41 @@ namespace Api.Features.Accounts
         }
         
         [HttpGet("{accountId}")]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType<TransactionDto>(StatusCodes.Status200OK)]
         [ProducesResponseType<ErrorRfc9910Dto>(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<AccountDto>> GetAccountById(Guid accountId)
         {
-            try
+            var account = await _mediator.Send(new GetAccountQuery()
             {
-                var account = await _mediator.Send(new GetAccountQuery()
-                {
-                    Id = accountId
-                });
-                
-                return Ok(account);
-            }
-            catch (NotFoundException e)
-            {
-                return NotFound(e.Message);
-            }
+                Id = accountId
+            });
+            
+            return Ok(account);
         }
 
         [HttpGet("{accountId}/statement")]
-        [ProducesResponseType<IEnumerable<TransactionDto>>(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType<ErrorRfc9910Dto>(StatusCodes.Status404NotFound)]
-        [ProducesResponseType<ErrorRfc9910Dto>(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType<IEnumerable<TransactionDto>>(StatusCodes.Status200OK)]
         public async Task<ActionResult<IEnumerable<TransactionDto>>> GetStatement(Guid accountId, [FromBody] GetStatementDto dto)
         {
-            try
+            var transactions = await _mediator.Send(new GetStatementQuery()
             {
-                var transactions = await _mediator.Send(new GetStatementQuery()
-                {
-                    AccountId = accountId,
-                    StartDate = dto.StartDate,
-                    EndDate = dto.EndDate
-                });
-                return Ok(transactions);
-            }
-            catch (NotFoundException)
-            {
-                return NotFound();
-            }
-            catch
-            {
-                return BadRequest();
-            }
+                AccountId = accountId,
+                StartDate = dto.StartDate,
+                EndDate = dto.EndDate
+            });
+            return Ok(transactions);
         }
 
         // READ
         [HttpGet("exists/{accountId}/{ownerId}")]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType<StatusDto>(StatusCodes.Status200OK)]
         public async Task<ActionResult<StatusDto>> ClientHasAccount(Guid accountId, Guid ownerId)
         {
-            var status = await _mediator.Send(new AccountExitstsQuery()
+            var status = await _mediator.Send(new AccountExistsQuery()
             {
                 Id = accountId,
                 OwnerId = ownerId
@@ -154,55 +129,32 @@ namespace Api.Features.Accounts
 
         #region UPDATE
         [HttpPatch("{accountId}")]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType<AccountDto>(StatusCodes.Status200OK)]
         [ProducesResponseType<ErrorRfc9910Dto>(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<AccountDto>> UpdateAccount(Guid accountId, [FromBody] UpdateAccountDto dto)
         {
-            try
+            var account = await _mediator.Send(new UpdateAccountCommand()
             {
-                var account = await _mediator.Send(new UpdateAccountCommand()
-                {
-                    Id = accountId,
-                    InterestRate = dto.InterestRate,
-                    ClosedDate = dto.ClosedDate
-                });
-                return Ok(account);
-            }
-            catch (NotFoundException e)
-            {
-                return NotFound(new { e.Message });
-            }
+                Id = accountId,
+                InterestRate = dto.InterestRate,
+                ClosedDate = dto.ClosedDate
+            });
+            return Ok(account);
         }
         #endregion
 
         #region DELETE
         [HttpDelete("{accountId}")]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType<ErrorRfc9910Dto>(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> DeleteAccount(Guid accountId)
         {
-            try
-            {
-                await _mediator.Send(new DeleteAccountCommand() { Id = accountId });
-            }
-            catch (NotFoundException e)
-            {
-                return NotFound(e.Message);
-            }
+            await _mediator.Send(new DeleteAccountCommand() { Id = accountId });
 
             return NoContent();
         }
         #endregion
-
-        // Эндпоинт для отладки. В api сценариях технического задания не учавствует
-        [HttpGet("clients")]
-        [ApiExplorerSettings(IgnoreApi = true)]
-        public async Task<ActionResult<IEnumerable<Client>>> GetClients()
-        {
-            return await _context.Clients
-                .Include(c => c.Accounts)
-                .ThenInclude(a => a.Transactions)
-                .ToListAsync();
-        }
     }
 }

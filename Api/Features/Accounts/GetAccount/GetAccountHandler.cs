@@ -1,7 +1,6 @@
 ﻿using Api.Abstractions;
 using Api.Data;
 using Api.Exceptions;
-using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace Api.Features.Accounts.GetAccount
@@ -17,9 +16,9 @@ namespace Api.Features.Accounts.GetAccount
 
         public async Task<AccountDto> Handle(GetAccountQuery request, CancellationToken cancellationToken)
         {
-            var account = _context.Accounts
+            var account = await _context.Accounts
                 .Include(a => a.Owner)
-                .Include(a => a.Transactions).FirstOrDefault(a => a.Id == request.Id);
+                .Include(a => a.Transactions).FirstOrDefaultAsync(a => a.Id == request.Id, cancellationToken);
             
             if (account == null) throw new NotFoundException(request.Id.ToString());
 
