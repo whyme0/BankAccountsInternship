@@ -20,7 +20,7 @@ namespace Api.Features.Accounts.GetAccount
                 .Include(a => a.Owner)
                 .Include(a => a.Transactions).FirstOrDefaultAsync(a => a.Id == request.Id, cancellationToken);
             
-            if (account == null) throw new NotFoundException(request.Id.ToString());
+            if (account == null) throw new NotFoundException();
 
             return new AccountDto()
             {

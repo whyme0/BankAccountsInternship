@@ -7,7 +7,7 @@ using MediatR;
 
 namespace Api.Features.Accounts.TransferMoneyBetweenAccounts
 {
-    public class TransferMoneyBetweenAccountsHandler : ICommandHandler<TransferMoneyBetweenAccountsCommand>
+    public class TransferMoneyBetweenAccountsHandler : ICommandHandler<TransferMoneyBetweenAccountsCommand, Unit>
     {
         private readonly IAppDbContext _context;
         private readonly IMediator _mediator;
@@ -18,7 +18,7 @@ namespace Api.Features.Accounts.TransferMoneyBetweenAccounts
             _mediator = mediator;
         }
 
-        public async Task Handle(TransferMoneyBetweenAccountsCommand request, CancellationToken cancellationToken)
+        public async Task<Unit> Handle(TransferMoneyBetweenAccountsCommand request, CancellationToken cancellationToken)
         {
             var senderAccount = _context.Accounts.FirstOrDefault(a => a.Id == request.SenderAccountId);
             var recipientAccount = _context.Accounts.FirstOrDefault(a => a.Id == request.RecipientAccountId);
@@ -27,10 +27,7 @@ namespace Api.Features.Accounts.TransferMoneyBetweenAccounts
             if (recipientAccount == null) throw new NotFoundException(request.RecipientAccountId.ToString());
             if (request.Amount > senderAccount.Balance) throw new BadRequestException("Amount more than available balance");
             if (senderAccount.Currency != recipientAccount.Currency) throw new BadRequestException("Incompatibility of currencies");
-            if (DateTime.UtcNow > recipientAccount.ClosedDate)
-                throw new BadRequestException("Cannot make transfer to closed account");
-
-            var currentDate = DateTime.UtcNow;
+            if (DateTime.UtcNow > recipientAccount.ClosedDate) throw new BadRequestException("Cannot make transfer to closed account");
 
             await _mediator.Send(new CreateTransactionCommand()
             {
@@ -39,8 +36,7 @@ namespace Api.Features.Accounts.TransferMoneyBetweenAccounts
                 Amount = -request.Amount,
                 Currency = senderAccount.Currency,
                 Type = TransactionType.Credit,
-                Description = $"Transfer for {recipientAccount.Id}",
-                Date = currentDate
+                Description = $"Transfer for {recipientAccount.Id}"
             }, cancellationToken);
 
             await _mediator.Send(new CreateTransactionCommand
@@ -50,13 +46,14 @@ namespace Api.Features.Accounts.TransferMoneyBetweenAccounts
                 Amount = request.Amount,
                 Currency = recipientAccount.Currency,
                 Type = TransactionType.Debit,
-                Description = $"Transfer from {senderAccount.Id}",
-                Date = currentDate
+                Description = $"Transfer from {senderAccount.Id}"
             }, cancellationToken);
 
 
             _context.Accounts.UpdateRange(senderAccount, recipientAccount);
             await _context.SaveChangesAsync(cancellationToken);
+
+            return Unit.Value;
         }
     }
 }

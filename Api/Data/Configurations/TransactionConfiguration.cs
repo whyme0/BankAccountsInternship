@@ -18,7 +18,6 @@ namespace Api.Data.Configurations
                 .HasColumnType("decimal(18,2)");
 
             builder.Property(t => t.Description)
-                .IsRequired()
                 .HasMaxLength(500);
 
             builder.Property(t => t.Date)

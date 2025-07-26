@@ -7,7 +7,8 @@ namespace Api.Features.Accounts.UpdateAccount
         public UpdateAccountCommandValidator()
         {
             RuleFor(x => x.Id)
-                .NotEmpty().WithMessage("Account Id is required.");
+                .NotEmpty().WithMessage("Account Id is required.")
+                .NotEqual(Guid.Empty).WithMessage("Account Id cannot be empty guid.");
 
             When(x => x.InterestRate.HasValue, () =>
             {
@@ -18,7 +19,7 @@ namespace Api.Features.Accounts.UpdateAccount
 
             When(x => x.ClosedDate.HasValue, () =>
             {
-                RuleFor(x => x.ClosedDate!.Value)
+                RuleFor(x => x.ClosedDate)
                     .GreaterThan(DateTime.UtcNow).WithMessage("Closed date must be in the future.");
             });
         }

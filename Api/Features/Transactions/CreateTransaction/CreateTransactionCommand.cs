@@ -11,6 +11,5 @@ namespace Api.Features.Transactions.CreateTransaction
         public string Currency { get; set; } = default!;
         public TransactionType Type { get; set; }
         public string? Description { get; set; }
-        public DateTime Date { get; set; }
     }
 }

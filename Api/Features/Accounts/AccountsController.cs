@@ -46,29 +46,18 @@ namespace Api.Features.Accounts
             }
         }
 
-        [HttpPost("transfer")]
+        [HttpPost("{accountId}/transfer")]
         [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType<ErrorRfc9910Dto>(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> Transfer([FromBody] MoneyTransferDto dto)
+        public async Task<IActionResult> Transfer(Guid accountId, [FromBody] MoneyTransferDto dto)
         {
-            try
+            await _mediator.Send(new TransferMoneyBetweenAccountsCommand
             {
-                await _mediator.Send(new TransferMoneyBetweenAccountsCommand
-                {
-                    Amount = dto.Amount,
-                    RecipientAccountId = dto.RecipientId,
-                    SenderAccountId = dto.SenderId
-                });
-            }
-            catch (NotFoundException e)
-            {
-                return NotFound(new { e.Message });
-            }
-            catch (Exception e)
-            {
-                return BadRequest(new { e.Message });
-            }
+                Amount = dto.Amount,
+                RecipientAccountId = dto.RecipientId,
+                SenderAccountId = accountId
+            });
 
             return Created();
         }
@@ -101,7 +90,7 @@ namespace Api.Features.Accounts
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType<ErrorRfc9910Dto>(StatusCodes.Status404NotFound)]
         [ProducesResponseType<IEnumerable<TransactionDto>>(StatusCodes.Status200OK)]
-        public async Task<ActionResult<IEnumerable<TransactionDto>>> GetStatement(Guid accountId, [FromBody] GetStatementDto dto)
+        public async Task<ActionResult<IEnumerable<TransactionDto>>> GetStatement(Guid accountId, [FromQuery] GetStatementDto dto)
         {
             var transactions = await _mediator.Send(new GetStatementQuery()
             {
@@ -130,6 +119,7 @@ namespace Api.Features.Accounts
         #region UPDATE
         [HttpPatch("{accountId}")]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status304NotModified)]
         [ProducesResponseType<AccountDto>(StatusCodes.Status200OK)]
         [ProducesResponseType<ErrorRfc9910Dto>(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<AccountDto>> UpdateAccount(Guid accountId, [FromBody] UpdateAccountDto dto)
@@ -140,6 +130,9 @@ namespace Api.Features.Accounts
                 InterestRate = dto.InterestRate,
                 ClosedDate = dto.ClosedDate
             });
+            
+            if (account == null) return StatusCode(StatusCodes.Status304NotModified);
+            
             return Ok(account);
         }
         #endregion

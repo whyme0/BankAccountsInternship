@@ -19,7 +19,7 @@ namespace Api.Features.Transactions.CreateTransaction
         {
             var account = await _context.Accounts.FirstOrDefaultAsync(a => a.Id == request.AccountId, cancellationToken);
 
-            if (account == null) throw new NotFoundException(request.AccountId.ToString());
+            if (account == null) throw new NotFoundException();
 
             var transaction = new Transaction
             {
@@ -30,7 +30,7 @@ namespace Api.Features.Transactions.CreateTransaction
                 Currency = request.Currency,
                 Type = request.Type,
                 Description = request.Description,
-                Date = request.Date
+                Date = DateTime.UtcNow
             };
 
             account.Balance += request.Amount;

@@ -7,7 +7,8 @@ namespace Api.Features.Accounts.DeleteAccount
         public DeleteAccountCommandValidator()
         {
             RuleFor(x => x.Id)
-                .NotEmpty().NotEqual(Guid.Empty).WithMessage("AccountId is required.");
+                .NotEmpty().WithMessage("Account id is required")
+                .NotEqual(Guid.Empty).WithMessage("Account id cannot be empty.");
         }
     }
 }

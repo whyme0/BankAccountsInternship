@@ -8,15 +8,10 @@ namespace Api.Features.Transactions
     [ApiController]
     [Route("api/[controller]")]
     [Produces("application/json")]
-    public class TransactionsController : ControllerBase
+    public class TransactionsController(IMediator mediator) : ControllerBase
     {
-        private readonly IMediator _mediator;
+        private readonly IMediator _mediator = mediator;
 
-        public TransactionsController(IMediator mediator)
-        {
-            _mediator = mediator;
-        }
-        
         [HttpPost]
         [ProducesResponseType<TransactionDto>(StatusCodes.Status201Created)]
         [ProducesResponseType<ErrorRfc9910Dto>(StatusCodes.Status404NotFound)]
@@ -28,12 +23,21 @@ namespace Api.Features.Transactions
                 Amount = dto.Amount,
                 CounterPartyAccountId = dto.CounterPartyAccountId,
                 Currency = dto.Currency,
-                Date = DateTime.UtcNow,
                 Description = dto.Description,
                 Type = dto.Type
             });
 
-            return Created(".", transaction);
+            return Created(".", new TransactionDto()
+            {
+                AccountId = transaction.AccountId,
+                Amount = transaction.Amount,
+                CounterPartyAccountId = transaction.CounterPartyAccountId,
+                Currency = transaction.Currency,
+                Date = transaction.Date,
+                Description = transaction.Description,
+                Id = transaction.Id,
+                Type = transaction.Type
+            });
         }
     }
 }

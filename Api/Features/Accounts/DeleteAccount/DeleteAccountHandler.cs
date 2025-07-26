@@ -1,10 +1,11 @@
 ﻿using Api.Abstractions;
 using Api.Data;
 using Api.Exceptions;
+using MediatR;
 
 namespace Api.Features.Accounts.DeleteAccount
 {
-    public class DeleteAccountHandler : ICommandHandler<DeleteAccountCommand>
+    public class DeleteAccountHandler : ICommandHandler<DeleteAccountCommand, Unit>
     {
         private readonly IAppDbContext _context;
 
@@ -13,7 +14,7 @@ namespace Api.Features.Accounts.DeleteAccount
             _context = context;
         }
 
-        public async Task Handle(DeleteAccountCommand request, CancellationToken cancellationToken)
+        public async Task<Unit> Handle(DeleteAccountCommand request, CancellationToken cancellationToken)
         {
             var account = _context.Accounts.FirstOrDefault(a => a.Id == request.Id);
 
@@ -22,6 +23,8 @@ namespace Api.Features.Accounts.DeleteAccount
 
             _context.Accounts.Remove(account);
             await _context.SaveChangesAsync(cancellationToken);
+
+            return Unit.Value;
         }
     }
 }

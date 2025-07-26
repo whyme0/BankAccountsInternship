@@ -6,9 +6,4 @@ namespace Api.Abstractions
         where TCommand : ICommand<TResponse>
     {
     }
-
-    public interface ICommandHandler<in TCommand> : IRequestHandler<TCommand>
-        where TCommand : ICommand
-    {
-    }
 }

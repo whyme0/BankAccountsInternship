@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Api.Features.Accounts.UpdateAccount
 {
-    public class UpdateAccountHandler : ICommandHandler<UpdateAccountCommand, AccountDto>
+    public class UpdateAccountHandler : ICommandHandler<UpdateAccountCommand, AccountDto?>
     {
         private readonly IAppDbContext _context;
 
@@ -14,12 +14,17 @@ namespace Api.Features.Accounts.UpdateAccount
             _context = context;
         }
 
-        public async Task<AccountDto> Handle(UpdateAccountCommand request, CancellationToken cancellationToken)
+        public async Task<AccountDto?> Handle(UpdateAccountCommand request, CancellationToken cancellationToken)
         {
             var account = await _context.Accounts
                 .Include(a => a.Owner)
                 .FirstOrDefaultAsync(a => a.Id == request.Id, cancellationToken);
-            if (account == null) throw new NotFoundException(request.Id.ToString());
+            if (account == null) throw new NotFoundException();
+
+            var isUnchanged =
+                (!request.InterestRate.HasValue || request.InterestRate == account.InterestRate)
+                && (!request.ClosedDate.HasValue || request.ClosedDate == account.ClosedDate);
+            if (isUnchanged) return null;
 
             if (request.InterestRate != null)
             {

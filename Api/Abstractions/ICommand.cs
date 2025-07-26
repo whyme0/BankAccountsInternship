@@ -6,7 +6,7 @@ namespace Api.Abstractions
     {
     }
 
-    public interface ICommand : IRequest
+    public interface ICommand : IRequest<Unit>
     {
     }
 }
