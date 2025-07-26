@@ -1,5 +1,4 @@
 ﻿using Api.Abstractions;
-using Api.Features.Accounts;
 using Api.Models;
 
 namespace Api.Features.Clients.GetClient

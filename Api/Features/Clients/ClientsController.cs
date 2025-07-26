@@ -1,20 +1,16 @@
-﻿using System.Reflection.Metadata.Ecma335;
-using Api.Data;
-using Api.Features.Clients.GetAllClients;
+﻿using Api.Features.Clients.GetAllClients;
 using Api.Features.Clients.GetClient;
 using Api.Models;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace Api.Features.Clients
 {
     [ApiController]
     [Route("api/[controller]")]
     [Produces("application/json")]
-    public class ClientsController(IAppDbContext context, IMediator mediator) : ControllerBase
+    public class ClientsController(IMediator mediator) : ControllerBase
     {
-        private readonly IAppDbContext _context = context;
         private readonly IMediator _mediator = mediator;
 
         [HttpGet]

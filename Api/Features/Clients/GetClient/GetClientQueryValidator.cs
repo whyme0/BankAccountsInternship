@@ -9,4 +9,5 @@ namespace Api.Features.Clients.GetClient
             RuleFor(x => x.Id)
                 .NotEmpty().NotEqual(Guid.Empty).WithMessage("Id required");
         }
+    }
 }

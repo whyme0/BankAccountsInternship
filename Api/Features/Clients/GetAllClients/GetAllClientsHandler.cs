@@ -1,11 +1,9 @@
 ﻿using Api.Abstractions;
 using Api.Data;
-using Api.Features.Accounts.GetAllAccounts;
-using Api.Features.Clients.GetAllClients;
 using Api.Models;
 using Microsoft.EntityFrameworkCore;
 
-namespace Api.Features.Accounts.GetAllClients
+namespace Api.Features.Clients.GetAllClients
 {
     public class GetAllClientsHandler : IQueryHandler<GetAllClientsQuery, IEnumerable<Client>>
     {

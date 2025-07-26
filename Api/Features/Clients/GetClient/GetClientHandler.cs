@@ -1,7 +1,6 @@
 ﻿using Api.Abstractions;
 using Api.Data;
 using Api.Exceptions;
-using Api.Features.Accounts;
 using Api.Models;
 using Microsoft.EntityFrameworkCore;
 

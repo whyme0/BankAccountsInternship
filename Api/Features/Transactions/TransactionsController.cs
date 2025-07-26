@@ -1,5 +1,4 @@
-﻿using Api.Exceptions;
-using Api.Features.Accounts;
+﻿using Api.Features.Accounts;
 using Api.Features.Transactions.CreateTransaction;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
