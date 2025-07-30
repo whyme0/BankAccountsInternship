@@ -15,6 +15,18 @@ public class CreateTransactionHandler(IAppDbContext context)
 
         if (account == null) throw new NotFoundException();
 
+        switch (request.Type)
+        {
+            case TransactionType.Debit:
+                account.Balance += request.Amount;
+                break;
+            case TransactionType.Credit:
+                account.Balance -= request.Amount;
+                break;
+            default:
+                throw new BadRequestException($"Wrong transaction type ({request.Type})");
+        }
+
         var transaction = new Transaction
         {
             Id = Guid.NewGuid(),
@@ -26,8 +38,6 @@ public class CreateTransactionHandler(IAppDbContext context)
             Description = request.Description,
             Date = DateTime.UtcNow
         };
-
-        account.Balance += request.Amount;
 
         context.Accounts.Update(account);
         context.Transactions.Add(transaction);

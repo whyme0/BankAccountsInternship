@@ -25,7 +25,7 @@ public class TransferMoneyBetweenAccountsHandler(IAppDbContext context, IMediato
         {
             AccountId = senderAccount.Id,
             CounterPartyAccountId = recipientAccount.Id,
-            Amount = -request.Amount,
+            Amount = request.Amount,
             Currency = senderAccount.Currency,
             Type = TransactionType.Credit,
             Description = $"Transfer for {recipientAccount.Id}"
