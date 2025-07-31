@@ -26,6 +26,7 @@ builder.Services.AddScoped<IAppDbContext, AppDbContext>();
 builder.Services.AddMediatR(c => 
     c.RegisterServicesFromAssembly(typeof(Program).Assembly));
 
+ValidatorOptions.Global.DefaultRuleLevelCascadeMode = CascadeMode.Stop;
 builder.Services.AddValidatorsFromAssembly(typeof(Program).Assembly);
 
 builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
