@@ -6,14 +6,19 @@ using MediatR;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 using Api.Exceptions;
+using Api.Filters;
+using Api.Presentation;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services
-    .AddControllers()
-    .AddJsonOptions(opts =>
+    .AddControllers(o =>
     {
-        opts.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
+        o.Filters.Add<MbResultFilter>();
+    })
+    .AddJsonOptions(o =>
+    {
+        o.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
     });
 
 builder.Services.AddEndpointsApiExplorer();
@@ -66,15 +71,28 @@ app.UseExceptionHandler(errorApp =>
         {
             case ValidationException validationException:
                 context.Response.StatusCode = 400;
-                await context.Response.WriteAsJsonAsync(new
+                await context.Response.WriteAsJsonAsync(new MbResult
                 {
-                    Errors = validationException.Errors.Select(e => new { e.PropertyName, e.ErrorMessage })
+                    MbError = validationException.Errors.Select(e => new MbError
+                    {
+                        PropertyName = e.PropertyName,
+                        ErrorMessage = e.ErrorMessage
+                    }).ToList(),
+                    StatusCode = StatusCodes.Status400BadRequest
                 });
                 break;
             case NotFoundException:
                 context.Response.StatusCode = 404;
                 context.Response.ContentType = "application/json";
-                await context.Response.WriteAsJsonAsync(new { Message = "Not Found" });
+                await context.Response.WriteAsJsonAsync(new MbResult
+                {
+                    MbError = [new MbError
+                    {
+                        PropertyName = "resource",
+                        ErrorMessage = "Not found"
+                    }],
+                    StatusCode = StatusCodes.Status404NotFound
+                });
                 break;
         }
     });
