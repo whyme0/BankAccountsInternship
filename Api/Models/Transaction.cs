@@ -15,6 +15,11 @@ public class Transaction
     public DateTime Date { get; set; }
 }
 
+/// <summary>
+/// Тип счета:<br/>
+/// 0 - Снятие средств,<br/>
+/// 1 - Пополнение средства
+/// </summary>
 public enum TransactionType
 {
     Credit,

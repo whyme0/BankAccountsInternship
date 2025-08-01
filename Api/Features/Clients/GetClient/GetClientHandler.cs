@@ -1,18 +1,21 @@
 ﻿using Api.Abstractions;
 using Api.Data;
 using Api.Exceptions;
-using Api.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace Api.Features.Clients.GetClient;
 
-public class GetClientHandler(IAppDbContext context) : IQueryHandler<GetClientQuery, Client>
+public class GetClientHandler(IAppDbContext context) : IQueryHandler<GetClientQuery, ClientDto>
 {
-    public async Task<Client> Handle(GetClientQuery request, CancellationToken cancellationToken)
+    public async Task<ClientDto> Handle(GetClientQuery request, CancellationToken cancellationToken)
     {
         var client = await context.Clients.FirstOrDefaultAsync(c => c.Id == request.Id, cancellationToken);
         if (client == null) throw new NotFoundException();
 
-        return client;
+        return new ClientDto
+        {
+            Id = client.Id,
+            Name = client.Name
+        };
     }
 }

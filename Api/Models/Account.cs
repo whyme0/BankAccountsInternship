@@ -1,6 +1,7 @@
 ﻿// ReSharper disable UnusedMember.Global
 // ReSharper disable PropertyCanBeMadeInitOnly.Global
 // ReSharper disable PreferConcreteValueOverDefault
+
 namespace Api.Models;
 
 public class Account
@@ -17,6 +18,12 @@ public class Account
     public ICollection<Transaction> Transactions { get; set; } = new List<Transaction>();
 }
 
+/// <summary>
+/// Тип счета:<br/>
+/// 0 - Текущий счет,
+/// 1 - Депозитный счет,
+/// 2 - Кредитный счет
+/// </summary>
 public enum AccountType
 {
     Checking,

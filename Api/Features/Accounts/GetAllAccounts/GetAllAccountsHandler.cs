@@ -1,5 +1,6 @@
 ﻿using Api.Abstractions;
 using Api.Data;
+using Api.Features.Clients;
 using Microsoft.EntityFrameworkCore;
 
 namespace Api.Features.Accounts.GetAllAccounts;

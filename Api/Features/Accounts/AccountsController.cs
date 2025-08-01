@@ -13,17 +13,24 @@ using Api.Presentation;
 
 namespace Api.Features.Accounts;
 
+/// <summary>
+/// Раздел отвечающий за операции со счетами
+/// </summary>
 [ApiController]
 [Route("api/[controller]")]
 [Produces("application/json")]
 public class AccountsController(IMediator mediator) : ControllerBase
 {
-
     #region CREATE
+    /// <summary>
+    /// Открывает новый счет клиенту
+    /// </summary>
+    /// <param name="dto">Тело запроса с параметрами для открытия счета</param>
+    /// <returns>MbResult&lt;T&gt;</returns>
     [HttpPost]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType<TransactionDto>(StatusCodes.Status201Created)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<MbResult>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<MbResult>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<MbResult<AccountDto>>(StatusCodes.Status201Created)]
     public async Task<MbResult<AccountDto>> CreateAccount([FromBody] CreateAccountDto dto)
     {
         var account = await mediator.Send(new CreateAccountCommand
@@ -38,10 +45,16 @@ public class AccountsController(IMediator mediator) : ControllerBase
         return new MbResult<AccountDto> {Value = account, StatusCode = StatusCodes.Status201Created};
     }
 
+    /// <summary>
+    /// Осуществляет перевод между двумя указанными счетами
+    /// </summary>
+    /// <param name="accountId">Идентификатор счета, который предствляет отправителя денежных средств</param>
+    /// <param name="dto">Тело запроса для осуществление перевода</param>
+    /// <returns>MbResult&lt;T&gt;</returns>
     [HttpPost("{accountId:guid}/transfer")]
-    [ProducesResponseType(StatusCodes.Status201Created)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<MbResult>(StatusCodes.Status201Created)]
+    [ProducesResponseType<MbResult>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<MbResult>(StatusCodes.Status400BadRequest)]
     public async Task<MbResult> Transfer(Guid accountId, [FromBody] MoneyTransferDto dto)
     {
         await mediator.Send(new TransferMoneyBetweenAccountsCommand
@@ -56,18 +69,28 @@ public class AccountsController(IMediator mediator) : ControllerBase
     #endregion
 
     #region READ
+    /// <summary>
+    /// Метод для получения списка всех счетов в базе данных
+    /// </summary>
+    /// <returns>MbResult&lt;T&gt;</returns>
     [HttpGet]
-    [ProducesResponseType<IEnumerable<AccountDto>>(StatusCodes.Status200OK)]
+    [ProducesResponseType<MbResult<IEnumerable<AccountDto>>>(StatusCodes.Status200OK)]
     public async Task<MbResult<IEnumerable<AccountDto>>> GetAccounts()
     {
         var accounts = await mediator.Send(new GetAllAccountsQuery());
         return new MbResult<IEnumerable<AccountDto>> { Value = accounts, StatusCode = StatusCodes.Status200OK };
     }
 
+
+    /// <summary>
+    /// Получает по счет по соответствующему guid идентификатору
+    /// </summary>
+    /// <param name="accountId">Уникальный индентификатор счета</param>
+    /// <returns>MbResult&lt;T&gt;</returns>
     [HttpGet("{accountId:guid}")]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType<TransactionDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<MbResult>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<MbResult>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<MbResult<TransactionDto>>(StatusCodes.Status200OK)]
     public async Task<MbResult<AccountDto>> GetAccountById(Guid accountId)
     {
         var account = await mediator.Send(new GetAccountQuery
@@ -78,10 +101,16 @@ public class AccountsController(IMediator mediator) : ControllerBase
         return new MbResult<AccountDto> {Value=account, StatusCode = StatusCodes.Status200OK};
     }
 
+    /// <summary>
+    /// Получает выписку за указанный промежуток времени
+    /// </summary>
+    /// <param name="accountId">Идентификатор счета для которого осуществляется выписка</param>
+    /// <param name="dto">Тело запроса, в котором указывается интервалы</param>
+    /// <returns>MbResult&lt;T&gt;</returns>
     [HttpGet("{accountId:guid}/statement")]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType<IEnumerable<TransactionDto>>(StatusCodes.Status200OK)]
+    [ProducesResponseType<MbResult>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<MbResult>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<MbResult<IEnumerable<TransactionDto>>>(StatusCodes.Status200OK)]
     public async Task<MbResult<IEnumerable<TransactionDto>>> GetStatement(Guid accountId, [FromQuery] GetStatementDto dto)
     {
         var transactions = await mediator.Send(new GetStatementQuery
@@ -93,10 +122,15 @@ public class AccountsController(IMediator mediator) : ControllerBase
         return new MbResult<IEnumerable<TransactionDto>> { Value = transactions, StatusCode = StatusCodes.Status200OK };
     }
 
-    // READ
+    /// <summary>
+    /// Проверить существование определенного счета у определенного клиента
+    /// </summary>
+    /// <param name="accountId">Идентификатор счета</param>
+    /// <param name="ownerId">Идентификатор клиента</param>
+    /// <returns>MbResult&lt;T&gt;</returns>
     [HttpGet("exists/{accountId:guid}/{ownerId:guid}")]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType<StatusDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<MbResult>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<MbResult<StatusDto>>(StatusCodes.Status200OK)]
     public async Task<MbResult<StatusDto>> ClientHasAccount(Guid accountId, Guid ownerId)
     {
         var status = await mediator.Send(new AccountExistsQuery
@@ -113,11 +147,18 @@ public class AccountsController(IMediator mediator) : ControllerBase
     #endregion
 
     #region UPDATE
+    /// <summary>
+    /// Изменение полей счета
+    /// </summary>
+    /// <remarks>Можно изменить только процентную ставку и дату закрытия счета</remarks>
+    /// <param name="accountId">Уникальный идентификатор счета</param>
+    /// <param name="dto">Тело, которое передается в запрос</param>
+    /// <returns>MbResult&lt;T&gt;</returns>
     [HttpPatch("{accountId:guid}")]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status304NotModified)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType<AccountDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<MbResult>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<MbResult>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<MbResult>(StatusCodes.Status304NotModified)]
+    [ProducesResponseType<MbResult<AccountDto>>(StatusCodes.Status200OK)]
     public async Task<MbResult<AccountDto>> UpdateAccount(Guid accountId, [FromBody] UpdateAccountDto dto)
     {
         var account = await mediator.Send(new UpdateAccountCommand
@@ -138,10 +179,15 @@ public class AccountsController(IMediator mediator) : ControllerBase
     #endregion
 
     #region DELETE
+    /// <summary>
+    /// Удалить счет по указанному идентификатору счета
+    /// </summary>
+    /// <param name="accountId">Уникальный идентификатор счета</param>
+    /// <returns>MbResult&lt;T&gt;</returns>
     [HttpDelete("{accountId:guid}")]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<MbResult>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<MbResult>(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<MbResult>(StatusCodes.Status400BadRequest)]
     public async Task<MbResult> DeleteAccount(Guid accountId)
     {
         await mediator.Send(new DeleteAccountCommand { Id = accountId });

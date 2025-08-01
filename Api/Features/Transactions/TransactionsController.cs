@@ -6,15 +6,24 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Api.Features.Transactions;
 
+/// <summary>
+/// Раздел отвечающий за операции с транзакциями
+/// </summary>
 [ApiController]
 [Route("api/[controller]")]
 [Produces("application/json")]
 public class TransactionsController(IMediator mediator) : ControllerBase
 {
+    /// <summary>
+    /// Создает транзакцию
+    /// </summary>
+    /// <remarks>Рекомендуется использовать в случаях зачисления/снятия денежных средств с банкомата, когда отсутствует контрагент. В остальных случаях стоит использовать `Transfer` метод контроллера `AccountsController`</remarks>
+    /// <param name="dto">Тело запроса для создания модели</param>
+    /// <returns>MbResult&lt;T&gt;</returns>
     [HttpPost]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType<TransactionDto>(StatusCodes.Status201Created)]
+    [ProducesResponseType<MbResult>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<MbResult>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<MbResult<TransactionDto>>(StatusCodes.Status201Created)]
     public async Task<MbResult<TransactionDto>> CreateTransaction([FromBody] CreateTransactionDto dto)
     {
         var transaction = await mediator.Send(new CreateTransactionCommand
