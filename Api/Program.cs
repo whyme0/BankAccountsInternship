@@ -12,6 +12,16 @@ using System.Reflection;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Services.AddCors(o =>
+{
+    o.AddPolicy("AllowAll", policy =>
+    {
+        policy.AllowAnyOrigin()
+            .AllowAnyMethod()
+            .AllowAnyHeader();
+    });
+});
+
 builder.Services
     .AddControllers(o =>
     {
@@ -62,6 +72,8 @@ if (app.Environment.IsDevelopment())
         await next();
     });
 }
+
+app.UseCors("AllowAll");
 
 app.UseHttpsRedirection();
 
