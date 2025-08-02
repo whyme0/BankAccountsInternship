@@ -20,6 +20,7 @@ namespace Api.Features.Accounts;
 [Route("api/[controller]")]
 [Produces("application/json")]
 [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+[ProducesResponseType<MbResult>(StatusCodes.Status401Unauthorized)]
 public class AccountsController(IMediator mediator) : ControllerBase
 {
     #region CREATE

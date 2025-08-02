@@ -1,4 +1,4 @@
-using Api.Data;
+﻿using Api.Data;
 using Api.Data.Initializer;
 using Api.Exceptions;
 using Api.Filters;
@@ -6,8 +6,12 @@ using Api.PipelineBehaviors;
 using Api.Presentation;
 using FluentValidation;
 using MediatR;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 using System.Reflection;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -22,10 +26,52 @@ builder.Services.AddCors(o =>
     });
 });
 
+builder.Services.AddAuthentication("Bearer")
+    .AddJwtBearer("Bearer", options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidIssuer = "BankAccountsAuthApi",
+
+            ValidateAudience = true,
+            ValidAudience = "BankAccountsApi",
+
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+
+            IssuerSigningKey = new SymmetricSecurityKey("this-is-should-be-pretty-secure-secret-key"u8.ToArray())
+        };
+
+        options.Events = new JwtBearerEvents
+        {
+            OnChallenge = async context =>
+            {
+                context.HandleResponse();
+
+                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                context.Response.ContentType = "application/json";
+
+                var result = new MbResult
+                {
+                    MbError = [new MbError
+                    {
+                        PropertyName = "RESOURCE",
+                        ErrorMessage = "Unauthorized"
+                    }],
+                    StatusCode = StatusCodes.Status401Unauthorized
+                };
+
+                await context.Response.WriteAsJsonAsync(result);
+            }
+        };
+    });
+
 builder.Services
     .AddControllers(o =>
     {
         o.Filters.Add<MbResultFilter>();
+        o.Filters.Add(new AuthorizeFilter());
     })
     .AddJsonOptions(o =>
     {
@@ -38,6 +84,38 @@ builder.Services.AddSwaggerGen(o =>
     var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
     var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
     o.IncludeXmlComments(xmlPath, includeControllerXmlComments: true);
+
+    o.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Version = "v1",
+        Title = "Bank accounts API",
+        Description = "API сервиса банка по работе со счетами"
+    });
+
+    o.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = SecuritySchemeType.Http,
+        Scheme = "Bearer",
+        BearerFormat = "JWT",
+        In = ParameterLocation.Header,
+        Description = "JWT Token"
+    });
+
+    o.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            Array.Empty<string>()
+        }
+    });
 });
 
 builder.Services.AddDbContext<AppDbContext>(options =>
@@ -77,6 +155,7 @@ app.UseCors("AllowAll");
 
 app.UseHttpsRedirection();
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
@@ -97,7 +176,7 @@ app.UseExceptionHandler(errorApp =>
         switch (exceptionHandlerPathFeature?.Error)
         {
             case ValidationException validationException:
-                context.Response.StatusCode = 400;
+                context.Response.StatusCode = StatusCodes.Status400BadRequest;
                 await context.Response.WriteAsJsonAsync(new MbResult
                 {
                     MbError = validationException.Errors.Select(e => new MbError
@@ -109,13 +188,13 @@ app.UseExceptionHandler(errorApp =>
                 });
                 break;
             case NotFoundException:
-                context.Response.StatusCode = 404;
+                context.Response.StatusCode = StatusCodes.Status404NotFound;
                 context.Response.ContentType = "application/json";
                 await context.Response.WriteAsJsonAsync(new MbResult
                 {
                     MbError = [new MbError
                     {
-                        PropertyName = "resource",
+                        PropertyName = "RESOURCE",
                         ErrorMessage = "Not found"
                     }],
                     StatusCode = StatusCodes.Status404NotFound

@@ -9,10 +9,11 @@ namespace Api.Features.Transactions;
 /// <summary>
 /// Раздел отвечающий за операции с транзакциями
 /// </summary>
-    [ApiController]
+[ApiController]
 [Route("api/[controller]")]
 [Produces("application/json")]
 [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+[ProducesResponseType<MbResult>(StatusCodes.Status401Unauthorized)]
 public class TransactionsController(IMediator mediator) : ControllerBase
 {
     /// <summary>

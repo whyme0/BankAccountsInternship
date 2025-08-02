@@ -14,6 +14,7 @@ namespace Api.Features.Clients;
 [Route("api/[controller]")]
 [Produces("application/json")]
 [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+[ProducesResponseType<MbResult>(StatusCodes.Status401Unauthorized)]
 public class ClientsController(IMediator mediator) : ControllerBase
 {
     /// <summary>
