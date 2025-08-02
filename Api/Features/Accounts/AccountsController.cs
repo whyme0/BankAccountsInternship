@@ -19,6 +19,7 @@ namespace Api.Features.Accounts;
 [ApiController]
 [Route("api/[controller]")]
 [Produces("application/json")]
+[ProducesResponseType(StatusCodes.Status500InternalServerError)]
 public class AccountsController(IMediator mediator) : ControllerBase
 {
     #region CREATE

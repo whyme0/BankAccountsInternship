@@ -13,6 +13,7 @@ namespace Api.Features.Clients;
 [ApiController]
 [Route("api/[controller]")]
 [Produces("application/json")]
+[ProducesResponseType(StatusCodes.Status500InternalServerError)]
 public class ClientsController(IMediator mediator) : ControllerBase
 {
     /// <summary>
