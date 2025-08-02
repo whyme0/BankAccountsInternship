@@ -8,9 +8,10 @@ PM> Add-Migration Init
 > **Сервис для аутентификации и получаения доступа** к API станет доступен по адресу: `http://localhost:5210/`
 
 ## Docker
-В корневой директории, где расположен файл `docker-compose.yml` в консоли выполнить команду:
+В корневой директории, где расположен файл `docker-compose.yml` в консоли выполнить команды:
 ```powershell
-docker-compose up --build -d
+..> dotnet ef migrations add Init --project Api/
+..> docker-compose up --build -d
 ```
 > **API банка** станет доступен по адресу: `http://localhost:80/`\
 > **Сервис для аутентификации и получаения доступа** к API станет доступен по адресу: `http://localhost:5210/`
