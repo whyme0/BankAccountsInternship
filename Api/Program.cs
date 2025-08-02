@@ -119,7 +119,7 @@ builder.Services.AddSwaggerGen(o =>
 });
 
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlite("Data Source=BankDb.db"));
+    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
 builder.Services.AddScoped<IAppDbContext, AppDbContext>();
 
 builder.Services.AddMediatR(c => 
