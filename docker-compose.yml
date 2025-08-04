@@ -6,7 +6,7 @@ services:
     ports:
       - "80:8080"
     environment:
-      - ASPNETCORE_ENVIRONMENT=Docker
+      - ASPNETCORE_ENVIRONMENT=Development
     volumes:
       - ./data:/app/data
     depends_on:
