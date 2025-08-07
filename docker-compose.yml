@@ -1,0 +1,22 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Api/Dockerfile
+    ports:
+      - "80:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+    volumes:
+      - ./data:/app/data
+    depends_on:
+      - authapi
+
+  authapi:
+    build:
+      context: .
+      dockerfile: AuthApi/Dockerfile
+    ports:
+      - "5210:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
