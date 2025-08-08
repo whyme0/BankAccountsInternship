@@ -1,5 +1,6 @@
 ﻿using Api.Features.Clients;
 using Api.Models;
+// ReSharper disable PropertyCanBeMadeInitOnly.Global
 
 // ReSharper disable UnusedAutoPropertyAccessor.Global
 // ReSharper disable PreferConcreteValueOverDefault

@@ -15,6 +15,7 @@ using Microsoft.OpenApi.Models;
 using System.Reflection;
 
 var builder = WebApplication.CreateBuilder(args);
+var defaultConnectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 
 builder.Services.AddCors(o =>
 {
@@ -118,8 +119,7 @@ builder.Services.AddSwaggerGen(o =>
     });
 });
 
-builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(defaultConnectionString));
 builder.Services.AddScoped<IAppDbContext, AppDbContext>();
 
 builder.Services.AddMediatR(c => 
