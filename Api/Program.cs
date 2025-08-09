@@ -200,6 +200,19 @@ app.UseExceptionHandler(errorApp =>
                     StatusCode = StatusCodes.Status404NotFound
                 });
                 break;
+            case { } e:
+                context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+                context.Response.ContentType = "application/json";
+                await context.Response.WriteAsJsonAsync(new MbResult
+                {
+                    MbError = [new MbError
+                    {
+                        PropertyName = "RESOURCE",
+                        ErrorMessage = e.Message
+                    }],
+                    StatusCode = StatusCodes.Status500InternalServerError
+                });
+                break;
         }
     });
 });
