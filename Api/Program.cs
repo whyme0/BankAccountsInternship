@@ -13,6 +13,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Reflection;
+using Npgsql;
 
 var builder = WebApplication.CreateBuilder(args);
 var defaultConnectionString = builder.Configuration.GetConnectionString("DefaultConnection");
@@ -198,6 +199,19 @@ app.UseExceptionHandler(errorApp =>
                         ErrorMessage = "Not found"
                     }],
                     StatusCode = StatusCodes.Status404NotFound
+                });
+                break;
+            case PostgresException { SqlState: "40001" } e:
+                context.Response.StatusCode = StatusCodes.Status409Conflict;
+                context.Response.ContentType = "application/json";
+                await context.Response.WriteAsJsonAsync(new MbResult
+                {
+                    MbError = [new MbError
+                    {
+                        PropertyName = "RESOURCE",
+                        ErrorMessage = e.MessageText
+                    }],
+                    StatusCode = StatusCodes.Status409Conflict
                 });
                 break;
             case { } e:

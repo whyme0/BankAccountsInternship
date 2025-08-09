@@ -8,6 +8,10 @@ public class AccountConfiguration : IEntityTypeConfiguration<Account>
 {
     public void Configure(EntityTypeBuilder<Account> builder)
     {
+        builder.Property(a => a.Xmin)
+            .IsConcurrencyToken()
+            .IsRowVersion();
+
         builder.HasIndex(a => a.OwnerId)
             .HasMethod("Hash");
 

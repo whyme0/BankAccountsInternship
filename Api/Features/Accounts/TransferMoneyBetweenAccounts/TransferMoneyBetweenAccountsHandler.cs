@@ -77,7 +77,7 @@ public class TransferMoneyBetweenAccountsHandler(IAppDbContext context, IMediato
         catch (PostgresException e) when (e.SqlState == "40001")
         {
             await transaction.RollbackAsync(cancellationToken);
-            throw new Exception("Serialization conflict");
+            throw new PostgresException("Serialization conflict", e.Severity, e.InvariantSeverity, e.SqlState);
         }
         catch
         {
