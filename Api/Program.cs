@@ -13,7 +13,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Reflection;
-using Npgsql;
 
 var builder = WebApplication.CreateBuilder(args);
 var defaultConnectionString = builder.Configuration.GetConnectionString("DefaultConnection");
@@ -233,4 +232,4 @@ app.UseExceptionHandler(errorApp =>
 
 app.Run();
 
-public partial class Program {}
+public partial class Program;
