@@ -2,6 +2,7 @@
 using Api.Abstractions;
 using Api.Data;
 using Api.Exceptions;
+using Api.Exceptions.Extensions;
 using Api.Features.Transactions.CreateTransaction;
 using Api.Models;
 using MediatR;
@@ -74,10 +75,10 @@ public class TransferMoneyBetweenAccountsHandler(IAppDbContext context, IMediato
             await transaction.CommitAsync(cancellationToken);
             return Unit.Value;
         }
-        catch (PostgresException e) when (e.SqlState == "40001")
+        catch (InvalidOperationException ie) when (ExceptionExtensions.TryFindPostgresException(ie, out var pg) && pg!.SqlState == "40001")
         {
             await transaction.RollbackAsync(cancellationToken);
-            throw new PostgresException("Serialization conflict", e.Severity, e.InvariantSeverity, e.SqlState);
+            throw new SerializationConflictException("Serialization conflict");
         }
         catch
         {

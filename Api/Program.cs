@@ -201,7 +201,7 @@ app.UseExceptionHandler(errorApp =>
                     StatusCode = StatusCodes.Status404NotFound
                 });
                 break;
-            case PostgresException { SqlState: "40001" } e:
+            case SerializationConflictException e:
                 context.Response.StatusCode = StatusCodes.Status409Conflict;
                 context.Response.ContentType = "application/json";
                 await context.Response.WriteAsJsonAsync(new MbResult
@@ -209,7 +209,7 @@ app.UseExceptionHandler(errorApp =>
                     MbError = [new MbError
                     {
                         PropertyName = "RESOURCE",
-                        ErrorMessage = e.MessageText
+                        ErrorMessage = e.Message
                     }],
                     StatusCode = StatusCodes.Status409Conflict
                 });
@@ -232,3 +232,5 @@ app.UseExceptionHandler(errorApp =>
 });
 
 app.Run();
+
+public partial class Program {}
