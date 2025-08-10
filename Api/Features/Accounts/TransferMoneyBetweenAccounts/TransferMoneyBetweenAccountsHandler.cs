@@ -7,7 +7,6 @@ using Api.Features.Transactions.CreateTransaction;
 using Api.Models;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using Npgsql;
 
 namespace Api.Features.Accounts.TransferMoneyBetweenAccounts;
 
