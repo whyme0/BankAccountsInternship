@@ -1,4 +1,4 @@
-services:
+﻿services:
   postgres:
     image: postgres:latest
     environment:
@@ -45,5 +45,37 @@ services:
     depends_on:
       - postgres
 
+  rabbitmq:
+    image: rabbitmq:management
+    hostname: rabbitmq
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: admin
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
+      interval: 30s
+      timeout: 30s
+      retries: 3
+
+  # Единственное решение, которое я нашел для добавления rabbitmq_definitions в RabbitMQ
+  rabbitmq-init:
+    image: curlimages/curl:latest
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    volumes:
+      - ./rabbitmq_definitions.json:/definitions.json
+    command: >
+      sh -c "
+        sleep 10 &&
+        curl -u admin:admin -X POST -H 'Content-Type: application/json' -d @/definitions.json http://rabbitmq:15672/api/definitions"
+
 volumes:
-  postgres_data:  
+  postgres_data:
+  rabbitmq_data:    
