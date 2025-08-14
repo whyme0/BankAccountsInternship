@@ -2,6 +2,8 @@
 // ReSharper disable PropertyCanBeMadeInitOnly.Global
 // ReSharper disable PreferConcreteValueOverDefault
 
+using Swashbuckle.AspNetCore.Annotations;
+
 namespace Api.Models;
 
 /// <summary>
@@ -61,6 +63,9 @@ public class Account
     /// Список всех транзакций
     /// </summary>
     public ICollection<Transaction> Transactions { get; set; } = new List<Transaction>();
+
+    [SwaggerIgnore]
+    public uint Xmin { get; set; }
 }
 
 /// <summary>

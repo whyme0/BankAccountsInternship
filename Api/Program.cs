@@ -15,6 +15,7 @@ using Microsoft.OpenApi.Models;
 using System.Reflection;
 
 var builder = WebApplication.CreateBuilder(args);
+var defaultConnectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 
 builder.Services.AddCors(o =>
 {
@@ -118,8 +119,7 @@ builder.Services.AddSwaggerGen(o =>
     });
 });
 
-builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
+builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(defaultConnectionString));
 builder.Services.AddScoped<IAppDbContext, AppDbContext>();
 
 builder.Services.AddMediatR(c => 
@@ -132,7 +132,7 @@ builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBeh
 
 var app = builder.Build();
 
-if (app.Environment.IsDevelopment())
+if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Docker"))
 {
     app.UseSwagger();
     app.UseSwaggerUI(options =>
@@ -200,8 +200,36 @@ app.UseExceptionHandler(errorApp =>
                     StatusCode = StatusCodes.Status404NotFound
                 });
                 break;
+            case SerializationConflictException e:
+                context.Response.StatusCode = StatusCodes.Status409Conflict;
+                context.Response.ContentType = "application/json";
+                await context.Response.WriteAsJsonAsync(new MbResult
+                {
+                    MbError = [new MbError
+                    {
+                        PropertyName = "RESOURCE",
+                        ErrorMessage = e.Message
+                    }],
+                    StatusCode = StatusCodes.Status409Conflict
+                });
+                break;
+            case { } e:
+                context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+                context.Response.ContentType = "application/json";
+                await context.Response.WriteAsJsonAsync(new MbResult
+                {
+                    MbError = [new MbError
+                    {
+                        PropertyName = "RESOURCE",
+                        ErrorMessage = e.Message
+                    }],
+                    StatusCode = StatusCodes.Status500InternalServerError
+                });
+                break;
         }
     });
 });
 
 app.Run();
+
+public partial class Program;

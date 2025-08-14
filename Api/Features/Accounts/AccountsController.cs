@@ -56,6 +56,7 @@ public class AccountsController(IMediator mediator) : ControllerBase
     [HttpPost("{accountId:guid}/transfer")]
     [ProducesResponseType<MbResult>(StatusCodes.Status201Created)]
     [ProducesResponseType<MbResult>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<MbResult>(StatusCodes.Status409Conflict)]
     [ProducesResponseType<MbResult>(StatusCodes.Status400BadRequest)]
     public async Task<MbResult> Transfer(Guid accountId, [FromBody] MoneyTransferDto dto)
     {

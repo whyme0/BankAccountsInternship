@@ -8,6 +8,10 @@ public class TransactionConfiguration : IEntityTypeConfiguration<Transaction>
 {
     public void Configure(EntityTypeBuilder<Transaction> builder)
     {
+        builder.HasIndex(t => new { t.AccountId, t.Date });
+        builder.HasIndex(t => t.Date)
+            .HasMethod("GiST");
+
         builder.HasKey(t => t.Id);
 
         builder.Property(t => t.Currency)
