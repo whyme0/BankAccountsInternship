@@ -1,12 +1,17 @@
-﻿using System.Data;
-using Api.Abstractions;
+﻿using Api.Abstractions;
 using Api.Data;
 using Api.Exceptions;
 using Api.Exceptions.Extensions;
 using Api.Features.Transactions.CreateTransaction;
 using Api.Models;
+using Api.Presentation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using System.Data;
+using System.Security.Principal;
+using System.Text.Json;
+using Api.Presentation.EventMessages;
+using Api.Presentation.MessageEvents;
 
 namespace Api.Features.Accounts.TransferMoneyBetweenAccounts;
 
@@ -65,12 +70,33 @@ public class TransferMoneyBetweenAccountsHandler(IAppDbContext context, IMediato
             context.Accounts.UpdateRange(senderAccount, recipientAccount);
             await context.SaveChangesAsync(cancellationToken);
 
+            var occuredAt = DateTime.UtcNow;
+            var outbox = new Outbox
+            {
+                Id = Guid.NewGuid(),
+                OccurredAt = occuredAt,
+                Type = "TransferCompleted",
+                RoutingKey = "money.transfer.completed",
+                Payload = JsonSerializer.Serialize(new TransferCompleted
+                {
+                    EventId = Guid.NewGuid(),
+                    OccuredAt = occuredAt,
+                    SourceAccountId = request.SenderAccountId,
+                    DestinationAccountId = request.RecipientAccountId,
+                    Amount = request.Amount,
+                    Currency = senderAccount.Currency,
+                    TransferId = Guid.NewGuid()
+                })
+            };
+
+            context.Outbox.Add(outbox);
+
             if (senderAccount.Balance != expectedSenderBalance || recipientAccount.Balance != expectedRecipientBalance)
                 throw new BadRequestException($"""
                                                Expected sender balance: {expectedSenderBalance}, current: {senderAccount.Balance}.
                                                Expected recipient balance: {expectedRecipientBalance}, current: {recipientAccount.Balance}.
                                                """);
-
+            await context.SaveChangesAsync(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
             return Unit.Value;
         }

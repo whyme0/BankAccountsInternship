@@ -2,7 +2,10 @@
 using Api.Data;
 using Api.Exceptions;
 using Api.Models;
+using Api.Presentation.MessageEvents;
 using Microsoft.EntityFrameworkCore;
+using System.Data;
+using System.Text.Json;
 
 namespace Api.Features.Transactions.CreateTransaction;
 
@@ -12,6 +15,9 @@ public class CreateTransactionHandler(IAppDbContext context)
     public async Task<Transaction> Handle(CreateTransactionCommand request, CancellationToken cancellationToken)
     {
         var account = await context.Accounts.FirstOrDefaultAsync(a => a.Id == request.AccountId, cancellationToken);
+        var accountTransactionId = Guid.NewGuid();
+        DateTime occuredAt;
+        Outbox outbox;
 
         if (account == null) throw new NotFoundException();
 
@@ -19,17 +25,53 @@ public class CreateTransactionHandler(IAppDbContext context)
         {
             case TransactionType.Debit:
                 account.Balance += request.Amount;
+                occuredAt = DateTime.UtcNow;
+                outbox = new Outbox
+                {
+                    Id = Guid.NewGuid(),
+                    OccurredAt = occuredAt,
+                    Type = "MoneyDebited",
+                    RoutingKey = "money.transfer.debited",
+                    Payload = JsonSerializer.Serialize(new MoneyDebited
+                    {
+                        EventId = Guid.NewGuid(),
+                        OccuredAt = occuredAt,
+                        AccountId = request.AccountId,
+                        Amount = request.Amount,
+                        Currency = request.Currency,
+                        OperationId = accountTransactionId,
+                        Reason = request.Description ?? string.Empty
+                    })
+                };
                 break;
             case TransactionType.Credit:
                 account.Balance -= request.Amount;
+                occuredAt = DateTime.UtcNow;
+                outbox = new Outbox
+                {
+                    Id = Guid.NewGuid(),
+                    OccurredAt = occuredAt,
+                    Type = "MoneyCredited",
+                    RoutingKey = "money.transfer.credited",
+                    Payload = JsonSerializer.Serialize(new MoneyCredited
+                    {
+                        EventId = Guid.NewGuid(),
+                        OccuredAt = occuredAt,
+                        AccountId = request.AccountId,
+                        Amount = request.Amount,
+                        Currency = request.Currency,
+                        OperationId = accountTransactionId
+                    })
+                };
                 break;
             default:
                 throw new BadRequestException($"Wrong transaction type ({request.Type})");
         }
 
-        var transaction = new Transaction
+
+        var accountTransaction = new Transaction
         {
-            Id = Guid.NewGuid(),
+            Id = accountTransactionId,
             AccountId = request.AccountId,
             CounterPartyAccountId = request.CounterPartyAccountId,
             Amount = request.Amount,
@@ -39,10 +81,12 @@ public class CreateTransactionHandler(IAppDbContext context)
             Date = DateTime.UtcNow
         };
 
+        
+        context.Outbox.Add(outbox);
         context.Accounts.Update(account);
-        context.Transactions.Add(transaction);
+        context.Transactions.Add(accountTransaction);
         await context.SaveChangesAsync(cancellationToken);
 
-        return transaction;
+        return accountTransaction;
     }
 }
