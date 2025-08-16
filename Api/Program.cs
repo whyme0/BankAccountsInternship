@@ -1,4 +1,5 @@
-﻿using Api.Data;
+﻿using Api.Consumers;
+using Api.Data;
 using Api.Data.Initializer;
 using Api.Exceptions;
 using Api.Filters;
@@ -12,6 +13,8 @@ using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using Npgsql;
+using RabbitMQ.Client;
 using System.Reflection;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -26,6 +29,28 @@ builder.Services.AddCors(o =>
             .AllowAnyHeader();
     });
 });
+
+
+try
+{
+    var factory = new ConnectionFactory()
+    {
+        HostName = "rabbitmq",
+        UserName = "admin",
+        Password = "admin"
+    };
+
+    IConnection rabbitConnection = await factory.CreateConnectionAsync();
+
+    builder.Services.AddSingleton(rabbitConnection);
+
+    builder.Services.AddHostedService<AntifraudConsumer>();
+    builder.Services.AddHostedService<AuditConsumer>();
+}
+catch
+{
+    // ignored
+}
 
 builder.Services.AddAuthentication("Bearer")
     .AddJwtBearer("Bearer", options =>
@@ -118,6 +143,9 @@ builder.Services.AddSwaggerGen(o =>
         }
     });
 });
+
+builder.Services.AddSingleton<NpgsqlDataSource>(_ =>
+    new NpgsqlDataSourceBuilder(defaultConnectionString).Build());
 
 builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(defaultConnectionString));
 builder.Services.AddScoped<IAppDbContext, AppDbContext>();

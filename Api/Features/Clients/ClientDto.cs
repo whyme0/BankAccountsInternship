@@ -15,4 +15,9 @@ public class ClientDto
     /// Имя клиента
     /// </summary>
     public string Name { get; set; } = default!;
+
+    /// <summary>
+    /// Заморожен ли счет клиента
+    /// </summary>
+    public bool Frozen { get; set; }
 }
