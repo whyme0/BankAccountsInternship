@@ -28,7 +28,7 @@ public class TransferMoneyBetweenAccountsHandler(IAppDbContext context, IMediato
 
         try
         {
-            var senderAccount = dbContext.Accounts.FirstOrDefault(a => a.Id == request.SenderAccountId);
+            var senderAccount = dbContext.Accounts.Include(a => a.Owner).FirstOrDefault(a => a.Id == request.SenderAccountId);
             var recipientAccount = dbContext.Accounts.FirstOrDefault(a => a.Id == request.RecipientAccountId);
 
             if (senderAccount == null)
@@ -41,6 +41,8 @@ public class TransferMoneyBetweenAccountsHandler(IAppDbContext context, IMediato
                 throw new BadRequestException("Incompatibility of currencies");
             if (DateTime.UtcNow > recipientAccount.ClosedDate)
                 throw new BadRequestException("Cannot make transfer to closed account");
+            if (senderAccount.Owner.Frozen)
+                throw new ConflictException("Client blocked");
 
             var expectedSenderBalance = senderAccount.Balance - request.Amount;
             var expectedRecipientBalance = recipientAccount.Balance + request.Amount;
