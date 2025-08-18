@@ -4,17 +4,18 @@ using Hangfire.PostgreSql;
 using HangfireJobs.Jobs;
 using Microsoft.EntityFrameworkCore;
 using RabbitMQ.Client;
+// ReSharper disable RedundantTypeArgumentsOfMethod
 
 var builder = WebApplication.CreateBuilder(args);
 
-var factory = new ConnectionFactory()
+var factory = new ConnectionFactory
 {
     HostName = "rabbitmq",
     UserName = "admin",
     Password = "admin"
 };
 
-IConnection rabbitConnection = await factory.CreateConnectionAsync();
+var rabbitConnection = await factory.CreateConnectionAsync();
 
 builder.Services.AddSingleton<IConnection>(rabbitConnection);
 
@@ -56,6 +57,7 @@ RecurringJob.AddOrUpdate<AccrueInterest>(
 RecurringJob.AddOrUpdate<OutboxDispatcherJob>(
     "OutboxDispatcherJob",
     job => job.Execute(CancellationToken.None),
-    Cron.Hourly);
+    "*/10 * * * * *");
+//Cron.Daily);
 
 app.Run();

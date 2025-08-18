@@ -1,4 +1,5 @@
-﻿namespace HangfireJobs.Jobs;
+﻿// ReSharper disable UnusedMemberInSuper.Global
+namespace HangfireJobs.Jobs;
 
 public interface IJob
 {

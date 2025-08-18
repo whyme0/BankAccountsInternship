@@ -1,13 +1,13 @@
 ﻿using Api.Abstractions;
 using MediatR;
+// ReSharper disable PropertyCanBeMadeInitOnly.Global
 
-namespace Api.Features.Clients.UnblockClient
+namespace Api.Features.Clients.UnblockClient;
+
+public class UnblockClientCommand : ICommand<Unit>
 {
-    public class UnblockClientCommand : ICommand<Unit>
-    {
-        /// <summary>
-        /// Уникальный идентификатор клиента
-        /// </summary>
-        public Guid Id { get; set; }
-    }
+    /// <summary>
+    /// Уникальный идентификатор клиента
+    /// </summary>
+    public Guid Id { get; set; }
 }

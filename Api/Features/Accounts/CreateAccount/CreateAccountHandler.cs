@@ -8,7 +8,6 @@ using Microsoft.EntityFrameworkCore;
 using System.Data;
 using System.Text.Json;
 using Api.Presentation.EventMessages;
-using Api.Presentation.MessageEvents;
 
 // ReSharper disable PreferConcreteValueOverDefault
 

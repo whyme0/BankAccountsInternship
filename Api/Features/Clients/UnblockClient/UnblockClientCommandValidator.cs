@@ -1,6 +1,5 @@
-﻿using Api.Features.Clients.BlockClient;
-using Api.Features.Clients.UnblockClient;
-using FluentValidation;
+﻿using FluentValidation;
+// ReSharper disable UnusedType.Global
 
 namespace Api.Features.Clients.UnblockClient;
 

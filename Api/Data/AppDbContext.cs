@@ -12,7 +12,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Outbox> Outbox { get; set; }
     public DbSet<InboxConsumed> InboxConsumed { get; set; }
     public DbSet<AuditEvent> AuditEvents { get; set; }
-    public DbSet<InboxDeadLetter> InboxDeadLetters { get; set; } = null!;
+    public DbSet<InboxDeadLetter> InboxDeadLetters { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -24,5 +24,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         modelBuilder.ApplyConfiguration(new OutboxConfiguration());
         modelBuilder.ApplyConfiguration(new InboxConsumedConfiguration());
         modelBuilder.ApplyConfiguration(new AuditEventConfiguration());
+        modelBuilder.ApplyConfiguration(new InboxDeadLettersConfiguration());
     }
 }

@@ -3,9 +3,7 @@ using Api.Data;
 using Api.Exceptions;
 using Api.Models;
 using Api.Presentation.EventMessages;
-using Api.Presentation.MessageEvents;
 using Microsoft.EntityFrameworkCore;
-using System.Data;
 using System.Text.Json;
 
 namespace Api.Features.Transactions.CreateTransaction;

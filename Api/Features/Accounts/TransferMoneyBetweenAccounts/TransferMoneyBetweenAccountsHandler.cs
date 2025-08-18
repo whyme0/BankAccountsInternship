@@ -9,7 +9,6 @@ using Microsoft.EntityFrameworkCore;
 using System.Data;
 using System.Text.Json;
 using Api.Presentation.EventMessages;
-using Api.Presentation.MessageEvents;
 
 namespace Api.Features.Accounts.TransferMoneyBetweenAccounts;
 
@@ -82,7 +81,7 @@ public class TransferMoneyBetweenAccountsHandler(IAppDbContext context, IMediato
                     EventId = Guid.NewGuid(),
                     OccurredAt = occuredAt,
                     Meta = new Meta(),
-                    Payload = new TransferCompleted()
+                    Payload = new TransferCompleted
                     {
                         Amount = request.Amount,
                         Currency = senderAccount.Currency,

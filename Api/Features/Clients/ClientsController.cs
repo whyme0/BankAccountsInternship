@@ -69,7 +69,7 @@ public class ClientsController(IMediator mediator) : ControllerBase
     {
         await mediator.Send(new BlockClientCommand { Id = id });
         
-        return new MbResult()
+        return new MbResult
         {
             StatusCode = StatusCodes.Status202Accepted
         };
@@ -88,7 +88,7 @@ public class ClientsController(IMediator mediator) : ControllerBase
     {
         await mediator.Send(new UnblockClientCommand { Id = id });
 
-        return new MbResult()
+        return new MbResult
         {
             StatusCode = StatusCodes.Status202Accepted
         };

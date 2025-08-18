@@ -40,14 +40,14 @@ builder.Services.AddHealthChecks()
 
 try
 {
-    var factory = new ConnectionFactory()
+    var factory = new ConnectionFactory
     {
         HostName = builder.Configuration["RabbitMQ:Host"] ?? "rabbitmq",
         UserName = builder.Configuration["RabbitMQ:User"] ?? "admin",
         Password = builder.Configuration["RabbitMQ:Password"] ?? "admin"
     };
 
-    IConnection rabbitConnection = await factory.CreateConnectionAsync();
+    var rabbitConnection = await factory.CreateConnectionAsync();
 
     builder.Services.AddSingleton(rabbitConnection);
 

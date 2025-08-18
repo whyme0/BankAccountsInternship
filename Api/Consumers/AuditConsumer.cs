@@ -1,43 +1,43 @@
-﻿using System.Reflection.Metadata.Ecma335;
-using System.Text;
+﻿using System.Text;
 using System.Text.Json;
 using Api.Data;
 using Api.Models;
 using Api.Presentation.EventMessages;
-using Api.Presentation.MessageEvents;
 using Microsoft.EntityFrameworkCore;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 
-namespace Api.Consumers
+namespace Api.Consumers;
+
+public class AuditConsumer(ILogger<AuditConsumer> logger, IConnection rmqConnection, IServiceScopeFactory scopeFactory) : BackgroundService
 {
-    public class AuditConsumer(ILogger<AuditConsumer> logger, IConnection rmqConnection, IServiceScopeFactory scopeFactory) : BackgroundService
+    protected override async Task<Task> ExecuteAsync(CancellationToken ct)
     {
-        protected override async Task<Task> ExecuteAsync(CancellationToken ct)
+        var channel = await rmqConnection.CreateChannelAsync(cancellationToken: ct);
+
+        await channel.BasicQosAsync(0, 1, global: false, ct);
+
+        await channel.QueueDeclareAsync("account.audit", durable: true, exclusive: false, autoDelete: false, cancellationToken: ct);
+        await channel.QueueBindAsync("account.audit", "account.events", "money.*", cancellationToken: ct);
+        await channel.QueueBindAsync("account.audit", "account.events", "account.*", cancellationToken: ct);
+
+        var consumer = new AsyncEventingBasicConsumer(channel);
+        consumer.ReceivedAsync += async (_, ea) =>
         {
-            var channel = await rmqConnection.CreateChannelAsync(cancellationToken: ct);
+            using var scope = scopeFactory.CreateScope();
+            var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var proceedEvent = true;
+            var retryCount = ea.BasicProperties.Headers?.TryGetValue("x-retry", out var header) is true
+                ? (int)(header ?? 0)
+                : 0;
 
-            await channel.BasicQosAsync(0, 1, global: false, ct);
-
-            await channel.QueueDeclareAsync("account.audit", durable: true, exclusive: false, autoDelete: false, cancellationToken: ct);
-            await channel.QueueBindAsync("account.audit", "account.events", "money.*", cancellationToken: ct);
-            await channel.QueueBindAsync("account.audit", "account.events", "account.*", cancellationToken: ct);
-
-            var consumer = new AsyncEventingBasicConsumer(channel);
-            consumer.ReceivedAsync += async (_, ea) =>
+            try
             {
-                using var scope = scopeFactory.CreateScope();
-                var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-                var proceedEvent = true;
-                int retryCount = ea.BasicProperties.Headers?.ContainsKey("x-retry") == true
-                    ? (int)(ea.BasicProperties.Headers["x-retry"] ?? 0)
-                    : 0;
+                var body = Encoding.UTF8.GetString(ea.Body.ToArray());
+                var props = ea.BasicProperties;
 
-                try
+                if (props.MessageId != null)
                 {
-                    var body = Encoding.UTF8.GetString(ea.Body.ToArray());
-                    var props = ea.BasicProperties;
-
                     var messageId = Guid.Parse(props.MessageId);
 
                     EventMessage<object>? checkingEvt;
@@ -63,11 +63,11 @@ namespace Api.Consumers
                         return;
                     }
 
-                    if (checkingEvt.Meta.Version != "v1")
+                    if (checkingEvt?.Meta.Version != "v1")
                     {
-                        context.InboxDeadLetters.Add(new InboxDeadLetter()
+                        context.InboxDeadLetters.Add(new InboxDeadLetter
                         {
-                            Error = $"Данная версия (${checkingEvt.Meta.Version}) не поддерживается",
+                            Error = $"Данная версия (${checkingEvt?.Meta.Version}) не поддерживается",
                             Handler = nameof(AntifraudConsumer),
                             Payload = body,
                             Id = Guid.NewGuid(),
@@ -94,32 +94,32 @@ namespace Api.Consumers
                     switch (ea.RoutingKey)
                     {
                         case "account.opened":
+                        {
+                            var evt = JsonSerializer.Deserialize<EventMessage<AccountOpened>>(body);
+                            if (evt != null)
                             {
-                                var evt = JsonSerializer.Deserialize<EventMessage<AccountOpened>>(body);
-                                if (evt != null)
-                                {
-                                    logger.LogInformation("Открыт счет: {0}", evt.Payload.AccountId);
-                                }
-                                break;
+                                logger.LogInformation("Открыт счет: {0}", evt.Payload.AccountId);
                             }
+                            break;
+                        }
                         case "money.transfer.credited":
+                        {
+                            var evt = JsonSerializer.Deserialize<EventMessage<MoneyCredited>>(body);
+                            if (evt != null)
                             {
-                                var evt = JsonSerializer.Deserialize<EventMessage<MoneyCredited>>(body);
-                                if (evt != null)
-                                {
-                                    logger.LogInformation("Со счета '{0}' списана сумма '{1}'", evt.Payload.AccountId, evt.Payload.Amount);
-                                }
-                                break;
+                                logger.LogInformation("Со счета '{0}' списана сумма '{1}'", evt.Payload.AccountId, evt.Payload.Amount);
                             }
+                            break;
+                        }
                         case "money.transfer.debited":
+                        {
+                            var evt = JsonSerializer.Deserialize<EventMessage<MoneyDebited>>(body);
+                            if (evt != null)
                             {
-                                var evt = JsonSerializer.Deserialize<EventMessage<MoneyDebited>>(body);
-                                if (evt != null)
-                                {
-                                    logger.LogInformation("На счет '{0}' зачислена сумма '{1}'", evt.Payload.AccountId, evt.Payload.Amount);
-                                }
-                                break;
+                                logger.LogInformation("На счет '{0}' зачислена сумма '{1}'", evt.Payload.AccountId, evt.Payload.Amount);
                             }
+                            break;
+                        }
                         case "money.transfer.completed":
                         {
                             var evt = JsonSerializer.Deserialize<EventMessage<TransferCompleted>>(body);
@@ -150,7 +150,7 @@ namespace Api.Consumers
                         {
                             Id = Guid.NewGuid(),
                             Payload = body,
-                            RecivedAt = DateTime.UtcNow,
+                            ReceivedAt = DateTime.UtcNow,
                             RoutingKey = ea.RoutingKey
                         });
 
@@ -170,19 +170,19 @@ namespace Api.Consumers
                             retryCount,
                             (DateTime.UtcNow - evt.OccurredAt).TotalMilliseconds);
                     }
-
-                    await channel.BasicAckAsync(ea.DeliveryTag, multiple: false, cancellationToken: ct);
                 }
-                catch (Exception ex)
-                {
-                    logger.LogError(ex, "Ошибка при обработке сообщения");
-                    await channel.BasicAckAsync(ea.DeliveryTag, multiple: false, cancellationToken: ct);
-                }
-            };
 
-            await channel.BasicConsumeAsync("account.audit", autoAck: false, consumer: consumer, cancellationToken: ct);
+                await channel.BasicAckAsync(ea.DeliveryTag, multiple: false, cancellationToken: ct);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Ошибка при обработке сообщения");
+                await channel.BasicAckAsync(ea.DeliveryTag, multiple: false, cancellationToken: ct);
+            }
+        };
 
-            return Task.CompletedTask;
-        }
+        await channel.BasicConsumeAsync("account.audit", autoAck: false, consumer: consumer, cancellationToken: ct);
+
+        return Task.CompletedTask;
     }
 }

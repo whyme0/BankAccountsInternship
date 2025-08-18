@@ -3,81 +3,83 @@ using System.Text.Json;
 using Api.Data;
 using Api.Models;
 using Api.Presentation.EventMessages;
-using Api.Presentation.MessageEvents;
 using Microsoft.EntityFrameworkCore;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
+#pragma warning disable CS8602 // Dereference of a possibly null reference.
 
-namespace Api.Consumers
+namespace Api.Consumers;
+
+public class AntifraudConsumer(ILogger<AntifraudConsumer> logger, IConnection rmqConnection, IServiceScopeFactory scopeFactory) : BackgroundService
 {
-    public class AntifraudConsumer(ILogger<AntifraudConsumer> logger, IConnection rmqConnection, IServiceScopeFactory scopeFactory) : BackgroundService
+    protected override async Task<Task> ExecuteAsync(CancellationToken ct)
     {
-        protected override async Task<Task> ExecuteAsync(CancellationToken ct)
+        var channel = await rmqConnection.CreateChannelAsync(cancellationToken: ct);
+
+        await channel.BasicQosAsync(0, 1, global: false, ct);
+
+        await channel.QueueDeclareAsync("account.antifraud", durable: true, exclusive: false, autoDelete: false, cancellationToken: ct);
+        await channel.QueueBindAsync("account.antifraud", "account.events", "client.*", cancellationToken: ct);
+
+        var consumer = new AsyncEventingBasicConsumer(channel);
+        consumer.ReceivedAsync += async (_, ea) =>
         {
-            var channel = await rmqConnection.CreateChannelAsync(cancellationToken: ct);
+            using var scope = scopeFactory.CreateScope();
+            var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var proceedEvent = true;
+            var retryCount = ea.BasicProperties.Headers?.TryGetValue("x-retry", out var header) is true
+                ? (int)(header ?? 0)
+                : 0;
 
-            await channel.BasicQosAsync(0, 1, global: false, ct);
-
-            await channel.QueueDeclareAsync("account.antifraud", durable: true, exclusive: false, autoDelete: false, cancellationToken: ct);
-            await channel.QueueBindAsync("account.antifraud", "account.events", "client.*", cancellationToken: ct);
-
-            var consumer = new AsyncEventingBasicConsumer(channel);
-            consumer.ReceivedAsync += async (_, ea) =>
+            try
             {
-                using var scope = scopeFactory.CreateScope();
-                var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-                var proceedEvent = true;
-                int retryCount = ea.BasicProperties.Headers?.ContainsKey("x-retry") == true
-                    ? (int)(ea.BasicProperties.Headers["x-retry"] ?? 0)
-                    : 0;
+                var body = Encoding.UTF8.GetString(ea.Body.ToArray());
+                var props = ea.BasicProperties;
 
+                EventMessage<object>? checkingEvt;
                 try
                 {
-                    var body = Encoding.UTF8.GetString(ea.Body.ToArray());
-                    var props = ea.BasicProperties;
-
-                    EventMessage<object>? checkingEvt;
-                    try
+                    checkingEvt = JsonSerializer.Deserialize<EventMessage<object>>(body);
+                }
+                catch (JsonException ex)
+                {
+                    context.InboxDeadLetters.Add(new InboxDeadLetter
                     {
-                        checkingEvt = JsonSerializer.Deserialize<EventMessage<object>>(body);
-                    }
-                    catch (JsonException ex)
+                        Error = $"Неверный envelope: {ex.Message}",
+                        Handler = nameof(AntifraudConsumer),
+                        Payload = body,
+                        Id = Guid.NewGuid(),
+                        MessageId = props.MessageId,
+                        ReceivedAt = DateTime.UtcNow
+                    });
+                        
+                    await context.SaveChangesAsync(ct);
+
+                    logger.LogWarning(ex, "Invalid envelope for message {MessageId}", props.MessageId);
+                    return;
+                }
+
+                if (checkingEvt.Meta.Version != "v1")
+                {
+                    context.InboxDeadLetters.Add(new InboxDeadLetter
                     {
-                        context.InboxDeadLetters.Add(new InboxDeadLetter()
-                        {
-                            Error = $"Неверный envelope: {ex.Message}",
-                            Handler = nameof(AntifraudConsumer),
-                            Payload = body,
-                            Id = Guid.NewGuid(),
-                            MessageId = props.MessageId,
-                            ReceivedAt = DateTime.UtcNow
-                        });
+                        Error = $"Данная версия (${checkingEvt.Meta.Version}) не поддерживается",
+                        Handler = nameof(AntifraudConsumer),
+                        Payload = body,
+                        Id = Guid.NewGuid(),
+                        MessageId = props.MessageId,
+                        ReceivedAt = DateTime.UtcNow
+                    });
                         
-                        await context.SaveChangesAsync(ct);
-
-                        logger.LogWarning(ex, "Invalid envelope for message {MessageId}", props.MessageId);
-                        return;
-                    }
-
-                    if (checkingEvt.Meta.Version != "v1")
-                    {
-                        context.InboxDeadLetters.Add(new InboxDeadLetter()
-                        {
-                            Error = $"Данная версия (${checkingEvt.Meta.Version}) не поддерживается",
-                            Handler = nameof(AntifraudConsumer),
-                            Payload = body,
-                            Id = Guid.NewGuid(),
-                            MessageId = props.MessageId,
-                            ReceivedAt = DateTime.UtcNow
-                        });
+                    await context.SaveChangesAsync(ct);
                         
-                        await context.SaveChangesAsync(ct);
-                        
-                        logger.LogWarning("Unsupported or missing meta.version for message {MessageId}", props.MessageId);
-                        return;
-                    }
+                    logger.LogWarning("Unsupported or missing meta.version for message {MessageId}", props.MessageId);
+                    return;
+                }
 
 
+                if (props.MessageId != null)
+                {
                     var messageId = Guid.Parse(props.MessageId);
 
                     var inboxes = await context.InboxConsumed
@@ -93,35 +95,35 @@ namespace Api.Consumers
                     switch (ea.RoutingKey)
                     {
                         case "client.blocked":
+                        {
+                            var evt = JsonSerializer.Deserialize<EventMessage<ClientBlocked>>(body);
+                            if (evt != null)
                             {
-                                var evt = JsonSerializer.Deserialize<EventMessage<ClientBlocked>>(body);
-                                if (evt != null)
-                                {
-                                    var client = await context.Clients.FirstOrDefaultAsync(c => c.Id == evt.Payload.ClientId, ct);
+                                var client = await context.Clients.FirstOrDefaultAsync(c => c.Id == evt.Payload.ClientId, ct);
 
-                                    client!.Frozen = true;
+                                client!.Frozen = true;
 
-                                    context.Clients.Update(client);
-                                    await context.SaveChangesAsync(ct);
-                                    logger.LogInformation("Client {ClientId} заблокирован", evt.Payload.ClientId);
-                                }
-                                break;
+                                context.Clients.Update(client);
+                                await context.SaveChangesAsync(ct);
+                                logger.LogInformation("Client {ClientId} заблокирован", evt.Payload.ClientId);
                             }
+                            break;
+                        }
                         case "client.unblocked":
+                        {
+                            var evt = JsonSerializer.Deserialize<EventMessage<ClientUnblocked>>(body);
+                            if (evt != null)
                             {
-                                var evt = JsonSerializer.Deserialize<EventMessage<ClientUnblocked>>(body);
-                                if (evt != null)
-                                {
-                                    var client = await context.Clients.FirstOrDefaultAsync(c => c.Id == evt.Payload.ClientId, ct);
+                                var client = await context.Clients.FirstOrDefaultAsync(c => c.Id == evt.Payload.ClientId, ct);
 
-                                    client!.Frozen = false;
+                                client!.Frozen = false;
 
-                                    context.Clients.Update(client);
-                                    await context.SaveChangesAsync(ct);
-                                    logger.LogInformation("Client {ClientId} разблокирован", evt.Payload.ClientId);
-                                }
-                                break;
+                                context.Clients.Update(client);
+                                await context.SaveChangesAsync(ct);
+                                logger.LogInformation("Client {ClientId} разблокирован", evt.Payload.ClientId);
                             }
+                            break;
+                        }
                         default:
                             proceedEvent = false;
                             logger.LogWarning("Неизвестный routingKey: {RoutingKey}", ea.RoutingKey);
@@ -134,7 +136,7 @@ namespace Api.Consumers
                         {
                             Id = Guid.NewGuid(),
                             Payload = body,
-                            RecivedAt = DateTime.UtcNow,
+                            ReceivedAt = DateTime.UtcNow,
                             RoutingKey = ea.RoutingKey
                         });
 
@@ -154,19 +156,19 @@ namespace Api.Consumers
                             retryCount,
                             (DateTime.UtcNow - evt.OccurredAt).TotalMilliseconds);
                     }
-
-                    await channel.BasicAckAsync(ea.DeliveryTag, multiple: false, cancellationToken: ct);
                 }
-                catch (Exception ex)
-                {
-                    logger.LogError(ex, "Ошибка при обработке сообщения");
-                    await channel.BasicAckAsync(ea.DeliveryTag, multiple: false, cancellationToken: ct);
-                }
-            };
 
-            await channel.BasicConsumeAsync("account.antifraud", autoAck: false, consumer: consumer, cancellationToken: ct);
+                await channel.BasicAckAsync(ea.DeliveryTag, multiple: false, cancellationToken: ct);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Ошибка при обработке сообщения");
+                await channel.BasicAckAsync(ea.DeliveryTag, multiple: false, cancellationToken: ct);
+            }
+        };
 
-            return Task.CompletedTask;
-        }
+        await channel.BasicConsumeAsync("account.antifraud", autoAck: false, consumer: consumer, cancellationToken: ct);
+
+        return Task.CompletedTask;
     }
 }

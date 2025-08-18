@@ -1,4 +1,6 @@
 ﻿// ReSharper disable PreferConcreteValueOverDefault
+// ReSharper disable PropertyCanBeMadeInitOnly.Global
+// ReSharper disable EntityFramework.ModelValidation.UnlimitedStringLength
 namespace Api.Models;
 
 public class Outbox

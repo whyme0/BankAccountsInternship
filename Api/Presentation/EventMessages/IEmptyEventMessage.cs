@@ -1,9 +1,9 @@
-﻿namespace Api.Presentation.EventMessages
+﻿// ReSharper disable UnusedMemberInSuper.Global
+namespace Api.Presentation.EventMessages;
+
+public interface IEmptyEventMessage
 {
-    public interface IEmptyEventMessage
-    {
-        public Guid EventId { get; set; }
-        public DateTime OccurredAt { get; set; }
-        public Meta Meta { get; set; }
-    }
+    public Guid EventId { get; set; }
+    public DateTime OccurredAt { get; set; }
+    public Meta Meta { get; set; }
 }

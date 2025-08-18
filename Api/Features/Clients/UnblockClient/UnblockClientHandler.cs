@@ -1,47 +1,44 @@
 ﻿using Api.Abstractions;
 using Api.Data;
 using Api.Exceptions;
-using Api.Features.Clients.BlockClient;
 using Api.Models;
 using Api.Presentation.EventMessages;
-using Api.Presentation.MessageEvents;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 
-namespace Api.Features.Clients.UnblockClient
+namespace Api.Features.Clients.UnblockClient;
+
+public class UnblockClientHandler(IAppDbContext context) : ICommandHandler<UnblockClientCommand, Unit>
 {
-    public class UnblockClientHandler(IAppDbContext context) : ICommandHandler<UnblockClientCommand, Unit>
+    public async Task<Unit> Handle(UnblockClientCommand request, CancellationToken cancellationToken)
     {
-        public async Task<Unit> Handle(UnblockClientCommand request, CancellationToken cancellationToken)
+        var client = await context.Clients
+            .FirstOrDefaultAsync(c => c.Id == request.Id, cancellationToken);
+        if (client == null) throw new NotFoundException();
+
+        var occuredAt = DateTime.UtcNow;
+        var outbox = new Outbox
         {
-            var client = await context.Clients
-                .FirstOrDefaultAsync(c => c.Id == request.Id, cancellationToken);
-            if (client == null) throw new NotFoundException();
-
-            var occuredAt = DateTime.UtcNow;
-            var outbox = new Outbox
+            Id = Guid.NewGuid(),
+            OccurredAt = occuredAt,
+            Type = "ClientUnblocked",
+            RoutingKey = "client.unblocked",
+            Payload = JsonSerializer.Serialize(new EventMessage<ClientUnblocked>
             {
-                Id = Guid.NewGuid(),
+                EventId = Guid.NewGuid(),
                 OccurredAt = occuredAt,
-                Type = "ClientUnblocked",
-                RoutingKey = "client.unblocked",
-                Payload = JsonSerializer.Serialize(new EventMessage<ClientUnblocked>
+                Payload = new ClientUnblocked
                 {
-                    EventId = Guid.NewGuid(),
-                    OccurredAt = occuredAt,
-                    Payload = new ClientUnblocked()
-                    {
-                        ClientId = client.Id
-                    },
-                    Meta = new Meta()
-                })
-            };
+                    ClientId = client.Id
+                },
+                Meta = new Meta()
+            })
+        };
 
-            context.Outbox.Add(outbox);
-            await context.SaveChangesAsync(cancellationToken);
+        context.Outbox.Add(outbox);
+        await context.SaveChangesAsync(cancellationToken);
 
-            return Unit.Value;
-        }
+        return Unit.Value;
     }
 }
