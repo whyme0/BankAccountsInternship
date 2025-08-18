@@ -10,6 +10,7 @@ using FluentValidation;
 using MediatR;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -17,6 +18,7 @@ using Microsoft.OpenApi.Models;
 using Npgsql;
 using RabbitMQ.Client;
 using System.Reflection;
+using Api.HealthChecks;
 
 var builder = WebApplication.CreateBuilder(args);
 var defaultConnectionString = builder.Configuration.GetConnectionString("DefaultConnection");
@@ -31,14 +33,18 @@ builder.Services.AddCors(o =>
     });
 });
 
+builder.Services.AddHealthChecks()
+    // hc - health check
+    .AddCheck<OutboxHealthCheck>("publisher-hc")
+    .AddCheck<RmqHealthCheck>("consumer-hc");
 
 try
 {
     var factory = new ConnectionFactory()
     {
-        HostName = "rabbitmq",
-        UserName = "admin",
-        Password = "admin"
+        HostName = builder.Configuration["RabbitMQ:Host"] ?? "rabbitmq",
+        UserName = builder.Configuration["RabbitMQ:User"] ?? "admin",
+        Password = builder.Configuration["RabbitMQ:Password"] ?? "admin"
     };
 
     IConnection rabbitConnection = await factory.CreateConnectionAsync();
@@ -262,6 +268,9 @@ app.UseExceptionHandler(errorApp =>
         }
     });
 });
+
+app.MapHealthChecks("/health/live", new HealthCheckOptions { Predicate = _ => false }); // сервис живой
+app.MapHealthChecks("/health/ready", new HealthCheckOptions { Predicate = _ => true }); // сервис живой и работает публикация и обработка сообщений
 
 app.Run();
 
