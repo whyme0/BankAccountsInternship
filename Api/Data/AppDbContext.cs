@@ -12,6 +12,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Outbox> Outbox { get; set; }
     public DbSet<InboxConsumed> InboxConsumed { get; set; }
     public DbSet<AuditEvent> AuditEvents { get; set; }
+    public DbSet<InboxDeadLetter> InboxDeadLetters { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

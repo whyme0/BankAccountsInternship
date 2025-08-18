@@ -12,6 +12,7 @@ public interface IAppDbContext
     public DbSet<Outbox> Outbox { get; set; }
     public DbSet<InboxConsumed> InboxConsumed { get; set; }
     public DbSet<AuditEvent> AuditEvents { get; set; }
+    public DbSet<InboxDeadLetter> InboxDeadLetters { get; set; }
 
     public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

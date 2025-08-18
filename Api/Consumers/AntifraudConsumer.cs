@@ -12,14 +12,14 @@ namespace Api.Consumers
 {
     public class AntifraudConsumer(ILogger<AntifraudConsumer> logger, IConnection rmqConnection, IServiceScopeFactory scopeFactory) : BackgroundService
     {
-        protected override async Task<Task> ExecuteAsync(CancellationToken cancellationToken)
+        protected override async Task<Task> ExecuteAsync(CancellationToken ct)
         {
-            var channel = await rmqConnection.CreateChannelAsync(cancellationToken: cancellationToken);
+            var channel = await rmqConnection.CreateChannelAsync(cancellationToken: ct);
 
-            await channel.BasicQosAsync(0, 1, global: false, cancellationToken);
+            await channel.BasicQosAsync(0, 1, global: false, ct);
 
-            await channel.QueueDeclareAsync("account.antifraud", durable: true, exclusive: false, autoDelete: false, cancellationToken: cancellationToken);
-            await channel.QueueBindAsync("account.antifraud", "account.events", "client.*", cancellationToken: cancellationToken);
+            await channel.QueueDeclareAsync("account.antifraud", durable: true, exclusive: false, autoDelete: false, cancellationToken: ct);
+            await channel.QueueBindAsync("account.antifraud", "account.events", "client.*", cancellationToken: ct);
 
             var consumer = new AsyncEventingBasicConsumer(channel);
             consumer.ReceivedAsync += async (_, ea) =>
@@ -36,15 +36,57 @@ namespace Api.Consumers
                     var body = Encoding.UTF8.GetString(ea.Body.ToArray());
                     var props = ea.BasicProperties;
 
+                    EventMessage<object>? checkingEvt;
+                    try
+                    {
+                        checkingEvt = JsonSerializer.Deserialize<EventMessage<object>>(body);
+                    }
+                    catch (JsonException ex)
+                    {
+                        context.InboxDeadLetters.Add(new InboxDeadLetter()
+                        {
+                            Error = $"Неверный envelope: {ex.Message}",
+                            Handler = nameof(AntifraudConsumer),
+                            Payload = body,
+                            Id = Guid.NewGuid(),
+                            MessageId = props.MessageId,
+                            ReceivedAt = DateTime.UtcNow
+                        });
+                        
+                        await context.SaveChangesAsync(ct);
+
+                        logger.LogWarning(ex, "Invalid envelope for message {MessageId}", props.MessageId);
+                        return;
+                    }
+
+                    if (checkingEvt.Meta.Version != "v1")
+                    {
+                        context.InboxDeadLetters.Add(new InboxDeadLetter()
+                        {
+                            Error = $"Данная версия (${checkingEvt.Meta.Version}) не поддерживается",
+                            Handler = nameof(AntifraudConsumer),
+                            Payload = body,
+                            Id = Guid.NewGuid(),
+                            MessageId = props.MessageId,
+                            ReceivedAt = DateTime.UtcNow
+                        });
+                        
+                        await context.SaveChangesAsync(ct);
+                        
+                        logger.LogWarning("Unsupported or missing meta.version for message {MessageId}", props.MessageId);
+                        return;
+                    }
+
+
                     var messageId = Guid.Parse(props.MessageId);
 
                     var inboxes = await context.InboxConsumed
-                        .AnyAsync(x => x.Id == messageId, cancellationToken);
+                        .AnyAsync(x => x.Id == messageId, ct);
 
                     if (inboxes)
                     {
                         logger.LogInformation("Сообщение {MessageId} уже обработано", messageId);
-                        await channel.BasicNackAsync(ea.DeliveryTag, multiple: false, requeue: true, cancellationToken: cancellationToken);
+                        await channel.BasicNackAsync(ea.DeliveryTag, multiple: false, requeue: true, cancellationToken: ct);
                         return;
                     }
 
@@ -55,12 +97,12 @@ namespace Api.Consumers
                                 var evt = JsonSerializer.Deserialize<EventMessage<ClientBlocked>>(body);
                                 if (evt != null)
                                 {
-                                    var client = await context.Clients.FirstOrDefaultAsync(c => c.Id == evt.Payload.ClientId, cancellationToken);
+                                    var client = await context.Clients.FirstOrDefaultAsync(c => c.Id == evt.Payload.ClientId, ct);
 
                                     client!.Frozen = true;
 
                                     context.Clients.Update(client);
-                                    await context.SaveChangesAsync(cancellationToken);
+                                    await context.SaveChangesAsync(ct);
                                     logger.LogInformation("Client {ClientId} заблокирован", evt.Payload.ClientId);
                                 }
                                 break;
@@ -70,12 +112,12 @@ namespace Api.Consumers
                                 var evt = JsonSerializer.Deserialize<EventMessage<ClientUnblocked>>(body);
                                 if (evt != null)
                                 {
-                                    var client = await context.Clients.FirstOrDefaultAsync(c => c.Id == evt.Payload.ClientId, cancellationToken);
+                                    var client = await context.Clients.FirstOrDefaultAsync(c => c.Id == evt.Payload.ClientId, ct);
 
                                     client!.Frozen = false;
 
                                     context.Clients.Update(client);
-                                    await context.SaveChangesAsync(cancellationToken);
+                                    await context.SaveChangesAsync(ct);
                                     logger.LogInformation("Client {ClientId} разблокирован", evt.Payload.ClientId);
                                 }
                                 break;
@@ -102,7 +144,7 @@ namespace Api.Consumers
                             ProcessedAt = DateTime.UtcNow,
                             Handler = nameof(AntifraudConsumer)
                         });
-                        await context.SaveChangesAsync(cancellationToken);
+                        await context.SaveChangesAsync(ct);
 
                         var evt = JsonSerializer.Deserialize<EventMessage<object>>(body);
                         logger.LogInformation("Обработано событие {0} {1} Correlation={2} Retry={3} Latency={4} ms",
@@ -113,16 +155,16 @@ namespace Api.Consumers
                             (DateTime.UtcNow - evt.OccurredAt).TotalMilliseconds);
                     }
 
-                    await channel.BasicAckAsync(ea.DeliveryTag, multiple: false, cancellationToken: cancellationToken);
+                    await channel.BasicAckAsync(ea.DeliveryTag, multiple: false, cancellationToken: ct);
                 }
                 catch (Exception ex)
                 {
                     logger.LogError(ex, "Ошибка при обработке сообщения");
-                    await channel.BasicAckAsync(ea.DeliveryTag, multiple: false, cancellationToken: cancellationToken);
+                    await channel.BasicAckAsync(ea.DeliveryTag, multiple: false, cancellationToken: ct);
                 }
             };
 
-            await channel.BasicConsumeAsync("account.antifraud", autoAck: false, consumer: consumer, cancellationToken: cancellationToken);
+            await channel.BasicConsumeAsync("account.antifraud", autoAck: false, consumer: consumer, cancellationToken: ct);
 
             return Task.CompletedTask;
         }
