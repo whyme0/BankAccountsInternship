@@ -49,7 +49,7 @@ try
 }
 catch
 {
-    // ignored
+    // игнорирование rabbitmq ошибки, необходимо для работы с ef cli
 }
 
 builder.Services.AddAuthentication("Bearer")
@@ -142,6 +142,8 @@ builder.Services.AddSwaggerGen(o =>
             Array.Empty<string>()
         }
     });
+
+    o.DocumentFilter<EventsDocumentFilter>();
 });
 
 builder.Services.AddSingleton<NpgsqlDataSource>(_ =>

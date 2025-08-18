@@ -52,10 +52,12 @@ BEGIN
             'correlationId', correlation_id,
             'causationId', causation_id
         ),
-        'accountId', account_id,
-        'periodFrom', CURRENT_DATE,
-        'periodTo', closed_date::date,
-        'amount', accrued_interest
+        'payload', jsonb_build_object(
+            'accountId', account_id,
+            'periodFrom', CURRENT_DATE,
+            'periodTo', closed_date::date,
+            'amount', accrued_interest
+        )
     );
 
     INSERT INTO public.outbox ("Id", "OccurredAt", "Type", "RoutingKey", "Payload", "PublishedAt")

@@ -7,6 +7,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using System.Data;
 using System.Text.Json;
+using Api.Presentation.EventMessages;
 using Api.Presentation.MessageEvents;
 
 // ReSharper disable PreferConcreteValueOverDefault
@@ -54,14 +55,18 @@ public class CreateAccountHandler(IAppDbContext context, IMediator mediator) : I
                 OccurredAt = occuredAt,
                 Type = "AccountOpened",
                 RoutingKey = "account.opened",
-                Payload = JsonSerializer.Serialize(new AccountOpened
+                Payload = JsonSerializer.Serialize(new EventMessage<AccountOpened>
                 {
                     EventId = Guid.NewGuid(),
-                    OccuredAt = occuredAt,
-                    AccountId = account.Id,
-                    OwnerId = accountOwner.Id,
-                    Currency = request.Currency,
-                    Type = request.Type
+                    OccurredAt = occuredAt,
+                    Payload = new AccountOpened
+                    {
+                        AccountId = account.Id,
+                        OwnerId = accountOwner.Id,
+                        Currency = request.Currency,
+                        Type = request.Type
+                    },
+                    Meta = new Meta()
                 })
             };
 

@@ -4,11 +4,9 @@ using Api.Exceptions;
 using Api.Exceptions.Extensions;
 using Api.Features.Transactions.CreateTransaction;
 using Api.Models;
-using Api.Presentation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using System.Data;
-using System.Security.Principal;
 using System.Text.Json;
 using Api.Presentation.EventMessages;
 using Api.Presentation.MessageEvents;
@@ -77,15 +75,19 @@ public class TransferMoneyBetweenAccountsHandler(IAppDbContext context, IMediato
                 OccurredAt = occuredAt,
                 Type = "TransferCompleted",
                 RoutingKey = "money.transfer.completed",
-                Payload = JsonSerializer.Serialize(new TransferCompleted
+                Payload = JsonSerializer.Serialize(new EventMessage<TransferCompleted>
                 {
                     EventId = Guid.NewGuid(),
-                    OccuredAt = occuredAt,
-                    SourceAccountId = request.SenderAccountId,
-                    DestinationAccountId = request.RecipientAccountId,
-                    Amount = request.Amount,
-                    Currency = senderAccount.Currency,
-                    TransferId = Guid.NewGuid()
+                    OccurredAt = occuredAt,
+                    Meta = new Meta(),
+                    Payload = new TransferCompleted()
+                    {
+                        Amount = request.Amount,
+                        Currency = senderAccount.Currency,
+                        DestinationAccountId = recipientAccount.Id,
+                        SourceAccountId = senderAccount.Id,
+                        TransferId = Guid.NewGuid()
+                    }
                 })
             };
 

@@ -3,6 +3,7 @@ using Api.Data;
 using Api.Exceptions;
 using Api.Features.Clients.BlockClient;
 using Api.Models;
+using Api.Presentation.EventMessages;
 using Api.Presentation.MessageEvents;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -25,11 +26,15 @@ namespace Api.Features.Clients.UnblockClient
                 OccurredAt = occuredAt,
                 Type = "ClientUnblocked",
                 RoutingKey = "client.unblocked",
-                Payload = JsonSerializer.Serialize(new ClientBlocked
+                Payload = JsonSerializer.Serialize(new EventMessage<ClientUnblocked>
                 {
                     EventId = Guid.NewGuid(),
-                    OccuredAt = occuredAt,
-                    ClientId = client.Id
+                    OccurredAt = occuredAt,
+                    Payload = new ClientUnblocked()
+                    {
+                        ClientId = client.Id
+                    },
+                    Meta = new Meta()
                 })
             };
 

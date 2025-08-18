@@ -2,6 +2,7 @@
 using Api.Data;
 using Api.Exceptions;
 using Api.Models;
+using Api.Presentation.EventMessages;
 using Api.Presentation.MessageEvents;
 using Microsoft.EntityFrameworkCore;
 using System.Data;
@@ -32,15 +33,19 @@ public class CreateTransactionHandler(IAppDbContext context)
                     OccurredAt = occuredAt,
                     Type = "MoneyDebited",
                     RoutingKey = "money.transfer.debited",
-                    Payload = JsonSerializer.Serialize(new MoneyDebited
+                    Payload = JsonSerializer.Serialize(new EventMessage<MoneyDebited>
                     {
                         EventId = Guid.NewGuid(),
-                        OccuredAt = occuredAt,
-                        AccountId = request.AccountId,
-                        Amount = request.Amount,
-                        Currency = request.Currency,
-                        OperationId = accountTransactionId,
-                        Reason = request.Description ?? string.Empty
+                        OccurredAt = occuredAt,
+                        Payload = new MoneyDebited
+                        {
+                            Amount = request.Amount,
+                            AccountId = request.AccountId,
+                            Currency = request.Currency,
+                            OperationId = Guid.NewGuid(),
+                            Reason = request.Description ?? "None"
+                        },
+                        Meta = new Meta()
                     })
                 };
                 break;
@@ -53,14 +58,18 @@ public class CreateTransactionHandler(IAppDbContext context)
                     OccurredAt = occuredAt,
                     Type = "MoneyCredited",
                     RoutingKey = "money.transfer.credited",
-                    Payload = JsonSerializer.Serialize(new MoneyCredited
+                    Payload = JsonSerializer.Serialize(new EventMessage<MoneyCredited>
                     {
                         EventId = Guid.NewGuid(),
-                        OccuredAt = occuredAt,
-                        AccountId = request.AccountId,
-                        Amount = request.Amount,
-                        Currency = request.Currency,
-                        OperationId = accountTransactionId
+                        OccurredAt = occuredAt,
+                        Payload = new MoneyCredited
+                        {
+                            Amount = request.Amount,
+                            AccountId = request.AccountId,
+                            Currency = request.Currency,
+                            OperationId = Guid.NewGuid()
+                        },
+                        Meta = new Meta()
                     })
                 };
                 break;

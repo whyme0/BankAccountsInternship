@@ -1,11 +1,13 @@
-﻿using System.Text.Json;
-using Api.Abstractions;
+﻿using Api.Abstractions;
 using Api.Data;
 using Api.Exceptions;
 using Api.Models;
+using Api.Presentation.EventMessages;
 using Api.Presentation.MessageEvents;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Principal;
+using System.Text.Json;
 
 namespace Api.Features.Clients.BlockClient
 {
@@ -24,11 +26,15 @@ namespace Api.Features.Clients.BlockClient
                 OccurredAt = occuredAt,
                 Type = "ClientBlocked",
                 RoutingKey = "client.blocked",
-                Payload = JsonSerializer.Serialize(new ClientBlocked
+                Payload = JsonSerializer.Serialize(new EventMessage<ClientBlocked>
                 {
                     EventId = Guid.NewGuid(),
-                    OccuredAt = occuredAt,
-                    ClientId = client.Id
+                    OccurredAt = occuredAt,
+                    Payload = new ClientBlocked
+                    {
+                        ClientId = client.Id
+                    },
+                    Meta = new Meta()
                 })
             };
 

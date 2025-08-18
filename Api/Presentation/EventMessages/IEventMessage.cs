@@ -2,11 +2,11 @@
 
 namespace Api.Presentation.EventMessages
 {
-    public interface IMessageEvent<TPayload>
+    public interface IEventMessage<TPayload> : IEmptyEventMessage
     {
-        public Guid EventId { get; set; }
-        public DateTime OccurredAt { get; set; }
-        public Meta Meta { get; set; }
+        /// <summary>
+        /// Содержимое события, соответствующее типу события
+        /// </summary>
         public TPayload Payload { get; set; }
     }
 }

@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Reflection.Metadata.Ecma335;
+using System.Text;
 using System.Text.Json;
 using Api.Data;
 using Api.Models;
@@ -27,6 +28,7 @@ namespace Api.Consumers
             {
                 using var scope = scopeFactory.CreateScope();
                 var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+                var proceedEvent = true;
 
                 try
                 {
@@ -44,66 +46,79 @@ namespace Api.Consumers
                         await channel.BasicNackAsync(ea.DeliveryTag, multiple: false, requeue: true, cancellationToken: cancellationToken);
                         return;
                     }
-
+                    
                     switch (ea.RoutingKey)
                     {
                         case "account.opened":
                             {
-                                var evt = JsonSerializer.Deserialize<AccountOpened>(body);
+                                var evt = JsonSerializer.Deserialize<EventMessage<AccountOpened>>(body);
                                 if (evt != null)
                                 {
-                                    logger.LogInformation("Открыт счет: {0}", evt.AccountId);
+                                    logger.LogInformation("Открыт счет: {0}", evt.Payload.AccountId);
                                 }
                                 break;
                             }
                         case "money.transfer.credited":
                             {
-                                var evt = JsonSerializer.Deserialize<MoneyCredited>(body);
+                                var evt = JsonSerializer.Deserialize<EventMessage<MoneyCredited>>(body);
                                 if (evt != null)
                                 {
-                                    logger.LogInformation("Со счета '{0}' списана сумма '{1}'", evt.AccountId, evt.Amount);
+                                    logger.LogInformation("Со счета '{0}' списана сумма '{1}'", evt.Payload.AccountId, evt.Payload.Amount);
                                 }
                                 break;
                             }
                         case "money.transfer.debited":
                             {
-                                var evt = JsonSerializer.Deserialize<MoneyDebited>(body);
+                                var evt = JsonSerializer.Deserialize<EventMessage<MoneyDebited>>(body);
                                 if (evt != null)
                                 {
-                                    logger.LogInformation("На счет '{0}' зачислена сумма '{1}'", evt.AccountId, evt.Amount);
+                                    logger.LogInformation("На счет '{0}' зачислена сумма '{1}'", evt.Payload.AccountId, evt.Payload.Amount);
                                 }
                                 break;
                             }
                         case "money.transfer.completed":
                         {
-                            var evt = JsonSerializer.Deserialize<TransferCompleted>(body);
+                            var evt = JsonSerializer.Deserialize<EventMessage<TransferCompleted>>(body);
                             if (evt != null)
                             {
-                                logger.LogInformation("Осуществлен перевод со счета '{0}' на счет '{1}'", evt.SourceAccountId, evt.DestinationAccountId);
+                                logger.LogInformation("Осуществлен перевод со счета '{0}' на счет '{1}'", evt.Payload.SourceAccountId, evt.Payload.DestinationAccountId);
+                            }
+                            break;
+                        }
+                        case "money.interest.accrued":
+                        {
+                            var evt = JsonSerializer.Deserialize<EventMessage<InterestAccrued>>(body);
+                            if (evt != null)
+                            {
+                                logger.LogInformation("Начислен процент на счет '{0}'", evt.Payload.AccountId);
                             }
                             break;
                         }
                         default:
                             logger.LogWarning("Неизвестный routingKey: {RoutingKey}", ea.RoutingKey);
+                            proceedEvent = false;
                             break;
                     }
 
-                    context.AuditEvents.Add(new AuditEvent
+                    if (proceedEvent)
                     {
-                        Id = Guid.NewGuid(),
-                        Payload = body,
-                        RecivedAt = DateTime.UtcNow,
-                        RoutingKey = ea.RoutingKey
-                    });
+                        context.AuditEvents.Add(new AuditEvent
+                        {
+                            Id = Guid.NewGuid(),
+                            Payload = body,
+                            RecivedAt = DateTime.UtcNow,
+                            RoutingKey = ea.RoutingKey
+                        });
 
-                    context.InboxConsumed.Add(new InboxConsumed
-                    {
-                        Id = messageId,
-                        ProcessedAt = DateTime.UtcNow,
-                        Handler = nameof(AuditConsumer)
-                    });
-                    await context.SaveChangesAsync(cancellationToken);
-
+                        context.InboxConsumed.Add(new InboxConsumed
+                        {
+                            Id = messageId,
+                            ProcessedAt = DateTime.UtcNow,
+                            Handler = nameof(AuditConsumer)
+                        });
+                        await context.SaveChangesAsync(cancellationToken);
+                    }
+                    
                     await channel.BasicAckAsync(ea.DeliveryTag, multiple: false, cancellationToken: cancellationToken);
                 }
                 catch (Exception ex)

@@ -1,9 +1,13 @@
 ﻿namespace Api.Presentation.MessageEvents
 {
+    /// <summary>
+    /// Событие блокировки клиента
+    /// </summary>
     public class ClientBlocked
     {
-        public Guid EventId { get; set; }
-        public DateTime OccuredAt { get; set; }
+        /// <summary>
+        /// Идентификатор клиента
+        /// </summary>
         public Guid ClientId { get; set; }
     }
 }

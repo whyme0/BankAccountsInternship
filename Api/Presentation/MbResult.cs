@@ -4,7 +4,7 @@ using Api.Abstractions;
 namespace Api.Presentation;
 
 /// <summary>
-/// Единственный объект, который должен быть возвращен endpoint'ом
+/// Единственный объект, который должен быть возвращен данным endpoint'ом
 /// </summary>
 public class MbResult<T> : IMbResult
 {
