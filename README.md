@@ -7,7 +7,7 @@ PM> Add-Migration Init
 
 Далее необходимо выбрать в вернхей панеле вариант запуска `docker-compose` слева от кнопки заупска приложения.
 
-## Консоль
+## Консоль (не рекомендуется)
 В корневой директории, где расположен файл `docker-compose.yml` в консоли выполнить команды:
 ```powershell
 ..> dotnet ef migrations add Init --project Api/ --startup-project Api/Api.csproj
