@@ -27,6 +27,9 @@ namespace Api.Consumers
                 using var scope = scopeFactory.CreateScope();
                 var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
                 var proceedEvent = true;
+                int retryCount = ea.BasicProperties.Headers?.ContainsKey("x-retry") == true
+                    ? (int)(ea.BasicProperties.Headers["x-retry"] ?? 0)
+                    : 0;
 
                 try
                 {
@@ -100,6 +103,14 @@ namespace Api.Consumers
                             Handler = nameof(AntifraudConsumer)
                         });
                         await context.SaveChangesAsync(cancellationToken);
+
+                        var evt = JsonSerializer.Deserialize<EventMessage<object>>(body);
+                        logger.LogInformation("Обработано событие {0} {1} Correlation={2} Retry={3} Latency={4} ms",
+                            evt!.EventId,
+                            ea.RoutingKey,
+                            evt.Meta.CorrelationId,
+                            retryCount,
+                            (DateTime.UtcNow - evt.OccurredAt).TotalMilliseconds);
                     }
 
                     await channel.BasicAckAsync(ea.DeliveryTag, multiple: false, cancellationToken: cancellationToken);

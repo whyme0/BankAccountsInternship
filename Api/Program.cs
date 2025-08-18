@@ -3,6 +3,7 @@ using Api.Data;
 using Api.Data.Initializer;
 using Api.Exceptions;
 using Api.Filters;
+using Api.Middlewares;
 using Api.PipelineBehaviors;
 using Api.Presentation;
 using FluentValidation;
@@ -161,6 +162,8 @@ builder.Services.AddValidatorsFromAssembly(typeof(Program).Assembly);
 builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
 
 var app = builder.Build();
+
+app.UseMiddleware<RequestLoggingMiddleware>();
 
 if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Docker"))
 {
