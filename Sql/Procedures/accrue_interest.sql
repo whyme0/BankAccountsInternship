@@ -13,6 +13,10 @@ DECLARE
     days_elapsed INTEGER;
     accrued_interest NUMERIC(18,2);
     currency varchar(3);
+    event_id uuid := gen_random_uuid();
+    correlation_id uuid := gen_random_uuid();
+    causation_id uuid := gen_random_uuid();
+    payload_json jsonb;
 BEGIN
     SELECT "Balance", "InterestRate", "ClosedDate", "Currency"
     INTO balance, interest_rate, closed_date, currency
@@ -38,6 +42,33 @@ BEGIN
     UPDATE public."Accounts"
     SET "Balance" = "Balance" + accrued_interest
     WHERE "Id" = account_id;
+
+    payload_json := jsonb_build_object(
+        'eventId', event_id,
+        'occurredAt', to_char(CURRENT_TIMESTAMP AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'),
+        'meta', jsonb_build_object(
+            'version', 'v1',
+            'source', 'account-service',
+            'correlationId', correlation_id,
+            'causationId', causation_id
+        ),
+        'payload', jsonb_build_object(
+            'accountId', account_id,
+            'periodFrom', CURRENT_DATE,
+            'periodTo', closed_date::date,
+            'amount', accrued_interest
+        )
+    );
+
+    INSERT INTO public.outbox ("Id", "OccurredAt", "Type", "RoutingKey", "Payload", "PublishedAt")
+    VALUES (
+        event_id,
+        CURRENT_TIMESTAMP AT TIME ZONE 'UTC',
+        'InterestAccrued',
+        'money.interest.accrued',
+        payload_json,
+        NULL
+    );
 END;
 $BODY$;
 ALTER PROCEDURE public.accrue_interest(uuid)

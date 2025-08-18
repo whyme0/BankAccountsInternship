@@ -9,6 +9,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Client> Clients { get; set; }
     public DbSet<Account> Accounts { get; set; }
     public DbSet<Transaction> Transactions { get; set; }
+    public DbSet<Outbox> Outbox { get; set; }
+    public DbSet<InboxConsumed> InboxConsumed { get; set; }
+    public DbSet<AuditEvent> AuditEvents { get; set; }
+    public DbSet<InboxDeadLetter> InboxDeadLetters { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -17,5 +21,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         modelBuilder.ApplyConfiguration(new ClientConfiguration());
         modelBuilder.ApplyConfiguration(new AccountConfiguration());
         modelBuilder.ApplyConfiguration(new TransactionConfiguration());
+        modelBuilder.ApplyConfiguration(new OutboxConfiguration());
+        modelBuilder.ApplyConfiguration(new InboxConsumedConfiguration());
+        modelBuilder.ApplyConfiguration(new AuditEventConfiguration());
+        modelBuilder.ApplyConfiguration(new InboxDeadLettersConfiguration());
     }
 }

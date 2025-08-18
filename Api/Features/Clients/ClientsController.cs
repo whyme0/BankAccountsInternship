@@ -1,5 +1,7 @@
-﻿using Api.Features.Clients.GetAllClients;
+﻿using Api.Features.Clients.BlockClient;
+using Api.Features.Clients.GetAllClients;
 using Api.Features.Clients.GetClient;
+using Api.Features.Clients.UnblockClient;
 using Api.Models;
 using Api.Presentation;
 using MediatR;
@@ -51,6 +53,44 @@ public class ClientsController(IMediator mediator) : ControllerBase
         {
             Value = client,
             StatusCode = StatusCodes.Status200OK
+        };
+    }
+
+    /// <summary>
+    /// Заблокировать клиенту возможность работать со счетами
+    /// </summary>
+    /// <param name="id">Уникальный идентификатор пользователя</param>
+    /// <returns>MbResult</returns>
+    [HttpPost("{id:guid}/block")]
+    [ProducesResponseType<MbResult>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<MbResult>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<MbResult<ClientDto>>(StatusCodes.Status202Accepted)]
+    public async Task<MbResult> BlockClient(Guid id)
+    {
+        await mediator.Send(new BlockClientCommand { Id = id });
+        
+        return new MbResult
+        {
+            StatusCode = StatusCodes.Status202Accepted
+        };
+    }
+
+    /// <summary>
+    /// Заблокировать клиенту возможность работать со счетами
+    /// </summary>
+    /// <param name="id">Уникальный идентификатор пользователя</param>
+    /// <returns>MbResult</returns>
+    [HttpPost("{id:guid}/unblock")]
+    [ProducesResponseType<MbResult>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<MbResult>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<MbResult<ClientDto>>(StatusCodes.Status202Accepted)]
+    public async Task<MbResult> UnblockClient(Guid id)
+    {
+        await mediator.Send(new UnblockClientCommand { Id = id });
+
+        return new MbResult
+        {
+            StatusCode = StatusCodes.Status202Accepted
         };
     }
 }

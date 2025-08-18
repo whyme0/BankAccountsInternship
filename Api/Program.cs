@@ -1,18 +1,24 @@
-﻿using Api.Data;
+﻿using Api.Consumers;
+using Api.Data;
 using Api.Data.Initializer;
 using Api.Exceptions;
 using Api.Filters;
+using Api.Middlewares;
 using Api.PipelineBehaviors;
 using Api.Presentation;
 using FluentValidation;
 using MediatR;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using Npgsql;
+using RabbitMQ.Client;
 using System.Reflection;
+using Api.HealthChecks;
 
 var builder = WebApplication.CreateBuilder(args);
 var defaultConnectionString = builder.Configuration.GetConnectionString("DefaultConnection");
@@ -26,6 +32,32 @@ builder.Services.AddCors(o =>
             .AllowAnyHeader();
     });
 });
+
+builder.Services.AddHealthChecks()
+    // hc - health check
+    .AddCheck<OutboxHealthCheck>("publisher-hc")
+    .AddCheck<RmqHealthCheck>("consumer-hc");
+
+try
+{
+    var factory = new ConnectionFactory
+    {
+        HostName = builder.Configuration["RabbitMQ:Host"] ?? "rabbitmq",
+        UserName = builder.Configuration["RabbitMQ:User"] ?? "admin",
+        Password = builder.Configuration["RabbitMQ:Password"] ?? "admin"
+    };
+
+    var rabbitConnection = await factory.CreateConnectionAsync();
+
+    builder.Services.AddSingleton(rabbitConnection);
+
+    builder.Services.AddHostedService<AntifraudConsumer>();
+    builder.Services.AddHostedService<AuditConsumer>();
+}
+catch
+{
+    // игнорирование rabbitmq ошибки, необходимо для работы с ef cli
+}
 
 builder.Services.AddAuthentication("Bearer")
     .AddJwtBearer("Bearer", options =>
@@ -117,7 +149,12 @@ builder.Services.AddSwaggerGen(o =>
             Array.Empty<string>()
         }
     });
+
+    o.DocumentFilter<EventsDocumentFilter>();
 });
+
+builder.Services.AddSingleton<NpgsqlDataSource>(_ =>
+    new NpgsqlDataSourceBuilder(defaultConnectionString).Build());
 
 builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(defaultConnectionString));
 builder.Services.AddScoped<IAppDbContext, AppDbContext>();
@@ -131,6 +168,8 @@ builder.Services.AddValidatorsFromAssembly(typeof(Program).Assembly);
 builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
 
 var app = builder.Build();
+
+app.UseMiddleware<RequestLoggingMiddleware>();
 
 if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Docker"))
 {
@@ -213,6 +252,19 @@ app.UseExceptionHandler(errorApp =>
                     StatusCode = StatusCodes.Status409Conflict
                 });
                 break;
+            case ConflictException e:
+                context.Response.StatusCode = StatusCodes.Status409Conflict;
+                context.Response.ContentType = "application/json";
+                await context.Response.WriteAsJsonAsync(new MbResult
+                {
+                    MbError = [new MbError
+                    {
+                        PropertyName = "RESOURCE",
+                        ErrorMessage = e.Message
+                    }],
+                    StatusCode = StatusCodes.Status409Conflict
+                });
+                break;
             case { } e:
                 context.Response.StatusCode = StatusCodes.Status500InternalServerError;
                 context.Response.ContentType = "application/json";
@@ -229,6 +281,9 @@ app.UseExceptionHandler(errorApp =>
         }
     });
 });
+
+app.MapHealthChecks("/health/live", new HealthCheckOptions { Predicate = _ => false }); // сервис живой
+app.MapHealthChecks("/health/ready", new HealthCheckOptions { Predicate = _ => true }); // сервис живой и работает публикация и обработка сообщений
 
 app.Run();
 

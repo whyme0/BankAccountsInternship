@@ -1,5 +1,4 @@
-﻿using System.Data;
-using Api.Abstractions;
+﻿using Api.Abstractions;
 using Api.Data;
 using Api.Exceptions;
 using Api.Exceptions.Extensions;
@@ -7,6 +6,9 @@ using Api.Features.Transactions.CreateTransaction;
 using Api.Models;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using System.Data;
+using System.Text.Json;
+using Api.Presentation.EventMessages;
 
 namespace Api.Features.Accounts.TransferMoneyBetweenAccounts;
 
@@ -25,7 +27,7 @@ public class TransferMoneyBetweenAccountsHandler(IAppDbContext context, IMediato
 
         try
         {
-            var senderAccount = dbContext.Accounts.FirstOrDefault(a => a.Id == request.SenderAccountId);
+            var senderAccount = dbContext.Accounts.Include(a => a.Owner).FirstOrDefault(a => a.Id == request.SenderAccountId);
             var recipientAccount = dbContext.Accounts.FirstOrDefault(a => a.Id == request.RecipientAccountId);
 
             if (senderAccount == null)
@@ -38,6 +40,8 @@ public class TransferMoneyBetweenAccountsHandler(IAppDbContext context, IMediato
                 throw new BadRequestException("Incompatibility of currencies");
             if (DateTime.UtcNow > recipientAccount.ClosedDate)
                 throw new BadRequestException("Cannot make transfer to closed account");
+            if (senderAccount.Owner.Frozen)
+                throw new ConflictException("Client blocked");
 
             var expectedSenderBalance = senderAccount.Balance - request.Amount;
             var expectedRecipientBalance = recipientAccount.Balance + request.Amount;
@@ -65,12 +69,37 @@ public class TransferMoneyBetweenAccountsHandler(IAppDbContext context, IMediato
             context.Accounts.UpdateRange(senderAccount, recipientAccount);
             await context.SaveChangesAsync(cancellationToken);
 
+            var occuredAt = DateTime.UtcNow;
+            var outbox = new Outbox
+            {
+                Id = Guid.NewGuid(),
+                OccurredAt = occuredAt,
+                Type = "TransferCompleted",
+                RoutingKey = "money.transfer.completed",
+                Payload = JsonSerializer.Serialize(new EventMessage<TransferCompleted>
+                {
+                    EventId = Guid.NewGuid(),
+                    OccurredAt = occuredAt,
+                    Meta = new Meta(),
+                    Payload = new TransferCompleted
+                    {
+                        Amount = request.Amount,
+                        Currency = senderAccount.Currency,
+                        DestinationAccountId = recipientAccount.Id,
+                        SourceAccountId = senderAccount.Id,
+                        TransferId = Guid.NewGuid()
+                    }
+                })
+            };
+
+            context.Outbox.Add(outbox);
+
             if (senderAccount.Balance != expectedSenderBalance || recipientAccount.Balance != expectedRecipientBalance)
                 throw new BadRequestException($"""
                                                Expected sender balance: {expectedSenderBalance}, current: {senderAccount.Balance}.
                                                Expected recipient balance: {expectedRecipientBalance}, current: {recipientAccount.Balance}.
                                                """);
-
+            await context.SaveChangesAsync(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
             return Unit.Value;
         }

@@ -1,8 +1,26 @@
+using Api.Data;
 using Hangfire;
 using Hangfire.PostgreSql;
 using HangfireJobs.Jobs;
+using Microsoft.EntityFrameworkCore;
+using RabbitMQ.Client;
+// ReSharper disable RedundantTypeArgumentsOfMethod
 
 var builder = WebApplication.CreateBuilder(args);
+
+var factory = new ConnectionFactory
+{
+    HostName = "rabbitmq",
+    UserName = "admin",
+    Password = "admin"
+};
+
+var rabbitConnection = await factory.CreateConnectionAsync();
+
+builder.Services.AddSingleton<IConnection>(rabbitConnection);
+
+builder.Services.AddDbContext<IAppDbContext, AppDbContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.AddHangfire(c1 => {
     c1.UsePostgreSqlStorage(c2 =>
@@ -12,9 +30,11 @@ builder.Services.AddHangfire(c1 => {
 });
 builder.Services.AddHangfireServer();
 builder.Services.AddScoped<IJob, AccrueInterest>();
+builder.Services.AddScoped<IJob, OutboxDispatcherJob>();
+
+builder.Services.AddLogging();
 
 var app = builder.Build();
-
 
 if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Docker"))
 {
@@ -32,7 +52,12 @@ app.MapGet("/", async context =>
 
 RecurringJob.AddOrUpdate<AccrueInterest>(
     "AccrueInterestJob",
-    job => job.AccrueInterestAsync(),
+    job => job.Execute(CancellationToken.None),
     Cron.Daily);
+RecurringJob.AddOrUpdate<OutboxDispatcherJob>(
+    "OutboxDispatcherJob",
+    job => job.Execute(CancellationToken.None),
+    "*/10 * * * * *");
+//Cron.Daily);
 
 app.Run();

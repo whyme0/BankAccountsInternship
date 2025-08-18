@@ -15,7 +15,8 @@ public class GetClientHandler(IAppDbContext context) : IQueryHandler<GetClientQu
         return new ClientDto
         {
             Id = client.Id,
-            Name = client.Name
+            Name = client.Name,
+            Frozen = client.Frozen
         };
     }
 }
