@@ -1,4 +1,4 @@
-﻿# Запуск
+﻿# Запуск (ветка `master`)
 ## Visual Studio
 Перед **первым** запуском проекта, в Package Manager Console выполните команду для проекта `Api`:
 ```powershell
